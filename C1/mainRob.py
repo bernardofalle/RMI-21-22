@@ -71,39 +71,28 @@ class MyRob(CRobLinkAngs):
         back_id = 3
         lin = 0.15
         rot = 0
-        # if    self.measures.irSensor[center_id] > 5.0\
-        #    or self.measures.irSensor[left_id]   > 5.0\
-        #    or self.measures.irSensor[right_id]  > 5.0\
-        #    or self.measures.irSensor[back_id]   > 5.0:
-        #     print('Rotate left')
-        #     self.driveMotors(-0.1,+0.1)
-        # elif self.measures.irSensor[left_id]> 2.7:
-        #     print('Rotate slowly right')
-        #     self.driveMotors(0.1,0.0)
-        # elif self.measures.irSensor[right_id]> 2.7:
-        #     print('Rotate slowly left')
-        #     self.driveMotors(0.0,0.1)
-        # else:
-        #     print('Go')
-        #     self.converter(0.05, 0)
-        if self.measures.irSensor[center_id] < 5.0 and self.measures.irSensor[center_id] > 0.5:
-            center_sensor = self.measures.irSensor[center_id]
-            lin = 0.1 / center_sensor
-            if self.measures.irSensor[left_id] > 1.0 and self.measures.irSensor[right_id] < 1.0:
-                rot = -3.14 / 2
-            elif self.measures.irSensor[right_id] > 1.0 and self.measures.irSensor[left_id] < 1.0:
-                rot = 3.14 / 2
+        center_sensor = self.measures.irSensor[center_id]
+        left_sensor = self.measures.irSensor[left_id]
+        right_sensor = self.measures.irSensor[right_id]
+        back_sensor = self.measures.irSensor[back_id]
+
+        if center_sensor < 5.0 and center_sensor > 0.5:
+            lin = 0.15 / center_sensor
+            if left_sensor > 2.17 and right_sensor < 2.17:
+                rot = -0.05 * left_sensor
+            elif right_sensor > 2.17 and left_sensor < 2.17:
+                rot = 0.05 * right_sensor
             else:
                 rot = 0
-        elif self.measures.irSensor[center_id] > 5.0:
+        elif center_sensor > 5.0:
             lin = 0
-            if self.measures.irSensor[left_id] > 1.0 and self.measures.irSensor[right_id] < 1.0:
-                rot = -3.14 / 2
-            elif self.measures.irSensor[right_id] > 1.0 and self.measures.irSensor[left_id] < 1.0:
-                rot = 3.14 / 2
+            if left_sensor > 2.17 and right_sensor < 2.17:
+                rot = -0.05 * left_sensor
+            elif right_sensor > 2.17 and left_sensor < 2.17:
+                rot = 0.05 * right_sensor
             else:
                 rot = 0
-        elif self.measures.irSensor[center_id] < 0.5:
+        elif center_sensor < 0.5:
             lin = 0.15
 
         self.converter(lin, rot)
