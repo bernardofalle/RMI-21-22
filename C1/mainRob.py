@@ -69,21 +69,49 @@ class MyRob(CRobLinkAngs):
         left_id = 1
         right_id = 2
         back_id = 3
-        if    self.measures.irSensor[center_id] > 5.0\
-           or self.measures.irSensor[left_id]   > 5.0\
-           or self.measures.irSensor[right_id]  > 5.0\
-           or self.measures.irSensor[back_id]   > 5.0:
-            print('Rotate left')
-            self.driveMotors(-0.1,+0.1)
-        elif self.measures.irSensor[left_id]> 2.7:
-            print('Rotate slowly right')
-            self.driveMotors(0.1,0.0)
-        elif self.measures.irSensor[right_id]> 2.7:
-            print('Rotate slowly left')
-            self.driveMotors(0.0,0.1)
-        else:
-            print('Go')
-            self.driveMotors(0.1,0.1)
+        lin = 0.15
+        rot = 0
+        # if    self.measures.irSensor[center_id] > 5.0\
+        #    or self.measures.irSensor[left_id]   > 5.0\
+        #    or self.measures.irSensor[right_id]  > 5.0\
+        #    or self.measures.irSensor[back_id]   > 5.0:
+        #     print('Rotate left')
+        #     self.driveMotors(-0.1,+0.1)
+        # elif self.measures.irSensor[left_id]> 2.7:
+        #     print('Rotate slowly right')
+        #     self.driveMotors(0.1,0.0)
+        # elif self.measures.irSensor[right_id]> 2.7:
+        #     print('Rotate slowly left')
+        #     self.driveMotors(0.0,0.1)
+        # else:
+        #     print('Go')
+        #     self.converter(0.05, 0)
+        if self.measures.irSensor[center_id] < 5.0 and self.measures.irSensor[center_id] > 0.5:
+            center_sensor = self.measures.irSensor[center_id]
+            lin = 0.1 / center_sensor
+            if self.measures.irSensor[left_id] > 1.0 and self.measures.irSensor[right_id] < 1.0:
+                rot = -3.14 / 2
+            elif self.measures.irSensor[right_id] > 1.0 and self.measures.irSensor[left_id] < 1.0:
+                rot = 3.14 / 2
+            else:
+                rot = 0
+        elif self.measures.irSensor[center_id] > 5.0:
+            lin = 0
+            if self.measures.irSensor[left_id] > 1.0 and self.measures.irSensor[right_id] < 1.0:
+                rot = -3.14 / 2
+            elif self.measures.irSensor[right_id] > 1.0 and self.measures.irSensor[left_id] < 1.0:
+                rot = 3.14 / 2
+            else:
+                rot = 0
+        elif self.measures.irSensor[center_id] < 0.5:
+            lin = 0.15
+
+        self.converter(lin, rot)
+
+    def converter(self, lin, rot):
+        left_motor = lin - rot
+        right_motor = lin + rot
+        self.driveMotors(left_motor, right_motor)
 
 class Map():
     def __init__(self, filename):
@@ -132,7 +160,7 @@ for i in range(1, len(sys.argv),2):
         quit()
 
 if __name__ == '__main__':
-    rob=MyRob(rob_name,pos,[0.0,60.0,-60.0,180.0],host)
+    rob = MyRob(rob_name, pos, [0.0, 60.0, -60.0, 180.0], host)
     if mapc != None:
         rob.setMap(mapc.labMap)
         rob.printMap()
