@@ -77,15 +77,23 @@ class MyRob(CRobLinkAngs):
         back_sensor = self.measures.irSensor[back_id]
 
         if center_sensor < 5.0 and center_sensor > 0.5:
-            lin = 0.15 / center_sensor
+            lin = 0.15/center_sensor
+            print(center_sensor)
             if left_sensor > 2.17 and right_sensor < 2.17:
                 rot = -0.05 * left_sensor
+                print('rotate slowly left')
             elif right_sensor > 2.17 and left_sensor < 2.17:
                 rot = 0.05 * right_sensor
-            elif left_sensor < right_sensor:
-                rot = 0.05*left_sensor
-            elif left_sensor>right_sensor:
-                rot = -0.05*right_sensor
+                print('rotate slowly right')
+            elif left_sensor < right_sensor and left_sensor<=3.0:
+                rot = 0.15*left_sensor
+                print(rot)
+                print('rotate  left')
+            elif left_sensor>right_sensor and right_sensor<=3.0:
+                rot = -0.15*right_sensor
+                print(rot)
+                print('rotate  right')
+
             else:
                 rot = 0
         elif center_sensor > 5.0:
@@ -94,15 +102,18 @@ class MyRob(CRobLinkAngs):
                 rot = -0.05 * left_sensor
             elif right_sensor > 2.17 and left_sensor < 2.17:
                 rot = 0.05 * right_sensor
-            elif left_sensor < right_sensor:
-                rot = 0.05*left_sensor
-            elif left_sensor>right_sensor:
-                rot = -0.05*right_sensor
+            elif left_sensor < right_sensor and left_sensor<=3.0:
+                rot = 0.14*left_sensor
+                print('debug x')
+            elif left_sensor>right_sensor and right_sensor<=3.0:
+                rot = -0.14*right_sensor
+                print('debug y')
             else:
                 rot = 0
         elif center_sensor < 0.5:
             lin = 0.15
 
+        
         self.converter(lin, rot)
 
     def converter(self, lin, rot):
