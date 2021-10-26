@@ -7,12 +7,6 @@ import xml.etree.ElementTree as ET
 
 CELLROWS=7
 CELLCOLS=14
-global counter
-global ground_sensor_list
-global full_list
-counter = 0
-ground_sensor_list = []
-full_list = []
 
 class MyRob(CRobLinkAngs):
     def __init__(self, rob_name, rob_id, angles, host):
@@ -71,82 +65,43 @@ class MyRob(CRobLinkAngs):
             
 
     def wander(self):
-        global counter
-        global ground_sensor_list
-        global full_list
         center_id = 0
         left_id = 1
         right_id = 2
         back_id = 3
         lin = 0.15
         rot = 0
-        default_list = [0, 1, 2]
-        counter_max = 15
         center_sensor = self.measures.irSensor[center_id]
         left_sensor = self.measures.irSensor[left_id]
         right_sensor = self.measures.irSensor[right_id]
         back_sensor = self.measures.irSensor[back_id]
-        ground_sensor = self.measures.ground
-        print(ground_sensor)
-        ground_sensor_list, full_list = self.recorder(ground_sensor, ground_sensor_list, full_list)
-        if len(ground_sensor_list) >= 2:
-            right_dir = self.comparer(ground_sensor_list, full_list, default_list)
-        else:
-            right_dir = True
 
-        if right_dir:
-            if center_sensor < 5.0 and center_sensor > 0.2:
-                lin = 0.15 / center_sensor
-                print('Slowing down')
-                if left_sensor > 2.17 and right_sensor < 2.17:
-                    rot = -0.05 * left_sensor
-                    print('Turning right')
-                elif right_sensor > 2.17 and left_sensor < 2.17:
-                    rot = 0.05 * right_sensor
-                    print('Turning left')
-                elif left_sensor < right_sensor:
-                    rot = 0.02 * left_sensor
-                    print('Turning slightly right')
-                elif left_sensor >= right_sensor:
-                    rot = -0.02 * right_sensor
-                    print('Turning slightly left')
-                else:
-                    rot = 0
-                    print('Not turning')
-            elif center_sensor > 5.0:
-                lin = 0
-                print('Stopped')
-                if left_sensor > 2.17 and right_sensor < 2.17:
-                    rot = -0.05 * left_sensor
-                    print('Turning right')
-                elif right_sensor > 2.17 and left_sensor < 2.17:
-                    rot = 0.05 * right_sensor
-                    print('Turning left')
-                elif left_sensor < right_sensor:
-                    rot = 0.02 * left_sensor
-                    print('Turning slightly right')
-                elif left_sensor >= right_sensor:
-                    rot = -0.02 * right_sensor
-                    print('Turning slightly left')
-                else:
-                    rot = 0
-                    print('Not turning')
-            elif center_sensor < 0.2:
-                print('Full Speed')
-                lin = 0.15
-
-        else:
-            if counter <= counter_max:
-                rot = 0.15
-                lin = 0
-                counter += 1
-                print('Going on the wrong direction, turning around')
+        if center_sensor < 5.0 and center_sensor > 0.5:
+            lin = 0.15 / center_sensor
+            if left_sensor > 2.17 and right_sensor < 2.17:
+                rot = -0.05 * left_sensor
+            elif right_sensor > 2.17 and left_sensor < 2.17:
+                rot = 0.05 * right_sensor
+            elif left_sensor < right_sensor:
+                rot = 0.05*left_sensor
+            elif left_sensor>right_sensor:
+                rot = -0.05*right_sensor
             else:
                 rot = 0
-                lin = 0
-                counter = 0
-                right_dir = True
-                print('''I believe I'm on the right direction, resuming normal driving''')
+        elif center_sensor > 5.0:
+            lin = 0
+            if left_sensor > 2.17 and right_sensor < 2.17:
+                rot = -0.05 * left_sensor
+            elif right_sensor > 2.17 and left_sensor < 2.17:
+                rot = 0.05 * right_sensor
+            elif left_sensor < right_sensor:
+                rot = 0.05*left_sensor
+            elif left_sensor>right_sensor:
+                rot = -0.05*right_sensor
+            else:
+                rot = 0
+        elif center_sensor < 0.5:
+            lin = 0.15
 
         self.converter(lin, rot)
 
@@ -154,28 +109,6 @@ class MyRob(CRobLinkAngs):
         left_motor = lin - rot
         right_motor = lin + rot
         self.driveMotors(left_motor, right_motor)
-
-    def recorder(self, ground_sensor, ground_sensor_list, full_list):
-        full_list.append(ground_sensor)
-        if ground_sensor != -1:
-            ground_sensor_list.append(ground_sensor)
-        return ground_sensor_list, full_list
-
-    def comparer(self, ground_sensor_list, full_list, default_list):
-        curr_ground = ground_sensor_list[-1]
-        prev_ground = ground_sensor_list[-2]
-        prev_full = full_list[-2]
-        default_ground_idx = int(default_list.index(curr_ground))
-
-        if default_list[default_ground_idx - 1] == prev_ground:
-            right_dir = True
-        else:
-            right_dir = False
-
-        return right_dir
-
-
-
 
 class Map():
     def __init__(self, filename):
