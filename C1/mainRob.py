@@ -82,10 +82,13 @@ class MyRob(CRobLinkAngs):
                 rot = -0.05 * left_sensor
             elif right_sensor > 2.17 and left_sensor < 2.17:
                 rot = 0.05 * right_sensor
-            elif left_sensor < right_sensor:
-                rot = 0.05*left_sensor
-            elif left_sensor>right_sensor:
-                rot = -0.05*right_sensor
+            elif left_sensor < right_sensor and left_sensor<=3.0:
+                rot = 0.15*left_sensor
+                print('rotate left')
+            elif left_sensor>right_sensor and left_sensor<=3.0:
+                rot = -0.15*right_sensor
+                print('rotate right')
+
             else:
                 rot = 0
         elif center_sensor > 5.0:
@@ -94,10 +97,13 @@ class MyRob(CRobLinkAngs):
                 rot = -0.05 * left_sensor
             elif right_sensor > 2.17 and left_sensor < 2.17:
                 rot = 0.05 * right_sensor
-            elif left_sensor < right_sensor:
+            elif left_sensor < right_sensor and left_sensor<=3.0:
                 rot = 0.05*left_sensor
-            elif left_sensor>right_sensor:
+                print('debug l')
+            elif left_sensor>right_sensor and right_sensor<=3.0:
                 rot = -0.05*right_sensor
+                print('debug r')
+
             else:
                 rot = 0
         elif center_sensor < 0.5:
