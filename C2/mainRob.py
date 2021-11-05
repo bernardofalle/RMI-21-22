@@ -17,7 +17,10 @@ class MyRob(CRobLinkAngs):
         self.errList = []
         self.counter = 0
         self.counter2 = 0
+        self.countergps = 0
+        self.counterfree = 0
         self.length = 2
+        self.lengthrot = 2
         self.endCycle = False
         self.onRot = False
 
@@ -79,29 +82,22 @@ class MyRob(CRobLinkAngs):
         left_id = 1
         right_id = 2
         back_id = 3
-        lin = 0.15
-        rot = 0
-        center_sensor = self.measures.irSensor[center_id]
-        left_sensor = self.measures.irSensor[left_id]
-        right_sensor = self.measures.irSensor[right_id]
-        back_sensor = self.measures.irSensor[back_id]
-        ground_sensor = self.measures.ground
-        compass = self.measures.compass
-        x = self.measures.x
-        y = self.measures.y
-        self.posList.append(x)
 
+        center_sensor = self.measures.irSensor[center_id]
+
+        self.gpsConverter()
+        print(self.measures.compass)
         if self.endCycle:
             if center_sensor > 1.2 or self.onRot:
-                if self.counter2 == 0:
+                if self.counterfree == 0:
                     self.whosFree()
                     print('I have a wall in front of me, rotating to ' + str(self.objective) + 'º')
-                    self.counter2 += 1
-                self.onRot = self.rotate(3, 0, 0, self.objective)
+                    self.counterfree += 1
+                self.onRot = self.rotate(3, 0, 0, self.objective, False)
             else:
                 print('Open field, coming through!')
                 self.endCycle = False
-                self.counter2 = 0
+                self.counterfree = 0
         else:
             self.endCycle = self.moveFront(50, 0.01, 0.00005)
 
@@ -115,36 +111,45 @@ class MyRob(CRobLinkAngs):
         f.close()
 
     def moveFront(self, Kp, Kd, Ki):
-        if -5 < self.measures.compass < 5:
+        """
+        PID for moving in front
+        :param Kp:
+        :param Kd:
+        :param Ki:
+        :return:
+        """
+        current = self.corrCompass()
+        if current == 0:
             if self.counter == 0:
                 xin = self.measures.x
-                self.xobj = xin + self.length
+                self.obj = xin + 2
                 self.lin = 0.15
                 self.integral = 0
-            err = self.xobj - self.measures.x
-        elif 85 < self.measures.compass < 95:
+            err = self.obj - self.measures.x
+        elif current == 90:
             if self.counter == 0:
                 yin = self.measures.y
-                self.yobj = yin + self.length
+                self.obj = yin + 2
                 self.lin = 0.15
                 self.integral = 0
-            err = self.yobj - self.measures.y
-        elif 175 < self.measures.compass < 185:
+            err = self.obj - self.measures.y
+            print('Err: ' + str(err))
+        elif current == 180:
             if self.counter == 0:
                 xin = self.measures.x
-                self.xobj = xin - self.length
+                self.obj = xin - 2
                 self.lin = 0.15
                 self.integral = 0
-            err = -self.xobj + self.measures.x
-        elif -95 < self.measures.compass < -85:
+            err = -self.obj + self.measures.x
+        elif current == -90:
             if self.counter == 0:
                 yin = self.measures.y
-                self.yobj = yin - self.length
+                self.obj = yin - 2
                 self.lin = 0.15
                 self.integral = 0
-            err = -self.yobj + self.measures.y
+            err = -self.obj + self.measures.y
 
-        # print(err)
+
         if self.lin != 0:
             diff = err / self.lin
         else:
@@ -152,21 +157,34 @@ class MyRob(CRobLinkAngs):
         self.integral += err
         self.lin = Kp * err + Kd * diff + Ki * self.integral
         self.length = err
-        self.converter(self.lin, 0)
+
+        objective = current
+        self.rotate(15, 0, 0.1, objective, True)
+
+        # print('Going with ' + str(self.lin) + ' linear and ' + str(self.rot) + ' angular velocity.')
+        self.converter(self.lin, self.rot)
         self.counter += 1
 
-        if self.length == 0:
-            self.counter2 += 1
-            if self.counter2 == 2:
-                self.counter = 0
-                self.counter2 = 0
-                self.length = 2
-                print('Mapping...')
-                return True
+        if -0.11 < self.length < 0.11:
+            self.obj += 2
+            print('Mapping...')
+
+            return True
         return False
 
-    def rotate(self, Kp, Kd, Ki, obj):
-        if self.counter == 0:
+    def rotate(self, Kp, Kd, Ki, obj, retrot):
+        """
+        PID to rotate
+        :param Kp:
+        :param Kd:
+        :param Ki:
+        :param obj:
+        :param retrot:
+        :return:
+        """
+
+
+        if self.counter2 == 0:
             self.rot = 0.15
             self.integral = 0
 
@@ -179,26 +197,45 @@ class MyRob(CRobLinkAngs):
             diff = 100
         self.integral += err
         self.rot = Kp * err + Kd * diff + Ki * self.integral
-        self.length = err
-        self.converter(0, self.rot)
-        self.counter += 1
-
-        if self.length == 0:
+        self.lengthrot = err
+        if not retrot:
+            self.converter(0, self.rot)
             self.counter = 0
+        else:
+            a = 1
+            # print('Integral: ' + str(self.integral) + '\n Diff: ' + str(diff) + '\n Err: ' + str(err))
+        self.counter2 += 1
+
+
+        if -0.005 < self.lengthrot < 0.005:
+            self.counter2 = 0
             print('Turned to ' + str(obj) + 'º')
             return False
         return True
 
-    def whosFree(self):
+    def corrCompass(self):
+        """
+        Corrects the compass position to the nearest cardinal point
+        :return:
+        """
         current = self.measures.compass
-        if -5 < current < 5:
+        if -45 < current < 45:
             current = 0
-        elif 85 < current < 95:
+        elif 45 < current < 135:
             current = 90
-        elif 175 < current < 185:
+        elif 135 < current or current < -135:
             current = 180
-        elif -95 < current < -85:
+        elif -100 < current < -80:
             current = -90
+        return current
+
+    def whosFree(self):
+        """
+        See which direction has a wall
+        """
+
+
+        current = self.corrCompass()
 
         if self.measures.irSensor[1] < 1:
             self.objective = current + 90
@@ -208,6 +245,18 @@ class MyRob(CRobLinkAngs):
             self.objective = current + 180
         else:
             print('''I'm lost, please help me''')
+
+    def gpsConverter(self):
+        """
+        Convert gps coordinates from absolute to relative
+        :return:
+        """
+        if self.countergps == 0:
+            self.xin = self.measures.x
+            self.yin = self.measures.y
+            self.countergps += 1
+        self.measures.x -= self.xin
+        self.measures.y -= self.yin
 
 
     def converter(self, lin, rot):
