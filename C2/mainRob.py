@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import math
 import sys
 from croblink import *
 from math import *
@@ -19,6 +19,7 @@ class MyRob(CRobLinkAngs):
         self.counter2 = 0
         self.length = 2
         self.endCycle = False
+        self.onRot = False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -91,19 +92,22 @@ class MyRob(CRobLinkAngs):
         self.posList.append(x)
 
         if self.endCycle:
-            if center_sensor > 1.2:
-                print('I have a wall in front of me, rotating to an open space')
-                self.converter(0, 0.2)
+            if center_sensor > 1.2 or self.onRot:
+                if self.counter2 == 0:
+                    self.whosFree()
+                    print('I have a wall in front of me, rotating to ' + str(self.objective) + 'º')
+                    self.counter2 += 1
+                self.onRot = self.rotate(3, 0, 0, self.objective)
             else:
                 print('Open field, coming through!')
                 self.endCycle = False
+                self.counter2 = 0
         else:
             self.endCycle = self.moveFront(50, 0.01, 0.00005)
 
 
 
 
-        
 
     def writeMap(self):
         f=open('mapping.txt','w')
@@ -111,13 +115,35 @@ class MyRob(CRobLinkAngs):
         f.close()
 
     def moveFront(self, Kp, Kd, Ki):
-        if self.counter == 0:
-            xin = self.measures.x
-            self.xobj = xin + self.length
-            self.lin = 0.15
-            self.integral = 0
+        if -5 < self.measures.compass < 5:
+            if self.counter == 0:
+                xin = self.measures.x
+                self.xobj = xin + self.length
+                self.lin = 0.15
+                self.integral = 0
+            err = self.xobj - self.measures.x
+        elif 85 < self.measures.compass < 95:
+            if self.counter == 0:
+                yin = self.measures.y
+                self.yobj = yin + self.length
+                self.lin = 0.15
+                self.integral = 0
+            err = self.yobj - self.measures.y
+        elif 175 < self.measures.compass < 185:
+            if self.counter == 0:
+                xin = self.measures.x
+                self.xobj = xin - self.length
+                self.lin = 0.15
+                self.integral = 0
+            err = -self.xobj + self.measures.x
+        elif -95 < self.measures.compass < -85:
+            if self.counter == 0:
+                yin = self.measures.y
+                self.yobj = yin - self.length
+                self.lin = 0.15
+                self.integral = 0
+            err = -self.yobj + self.measures.y
 
-        err = self.xobj - self.measures.x
         # print(err)
         if self.lin != 0:
             diff = err / self.lin
@@ -138,6 +164,51 @@ class MyRob(CRobLinkAngs):
                 print('Mapping...')
                 return True
         return False
+
+    def rotate(self, Kp, Kd, Ki, obj):
+        if self.counter == 0:
+            self.rot = 0.15
+            self.integral = 0
+
+        err = (obj - self.measures.compass) * math.pi / 180
+
+        # print(err)
+        if self.rot != 0:
+            diff = err / self.rot
+        else:
+            diff = 100
+        self.integral += err
+        self.rot = Kp * err + Kd * diff + Ki * self.integral
+        self.length = err
+        self.converter(0, self.rot)
+        self.counter += 1
+
+        if self.length == 0:
+            self.counter = 0
+            print('Turned to ' + str(obj) + 'º')
+            return False
+        return True
+
+    def whosFree(self):
+        current = self.measures.compass
+        if -5 < current < 5:
+            current = 0
+        elif 85 < current < 95:
+            current = 90
+        elif 175 < current < 185:
+            current = 180
+        elif -95 < current < -85:
+            current = -90
+
+        if self.measures.irSensor[1] < 1:
+            self.objective = current + 90
+        elif self.measures.irSensor[2] < 1:
+            self.objective = current - 90
+        elif self.measures.irSensor[3] < 1:
+            self.objective = current + 180
+        else:
+            print('''I'm lost, please help me''')
+
 
     def converter(self, lin, rot):
         left_motor = lin - rot / 2
