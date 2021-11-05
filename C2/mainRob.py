@@ -4,7 +4,7 @@ import sys
 from croblink import *
 from math import *
 import xml.etree.ElementTree as ET
-
+from time import sleep
 
 
 CELLROWS=7
@@ -15,6 +15,10 @@ class MyRob(CRobLinkAngs):
         CRobLinkAngs.__init__(self, rob_name, rob_id, angles, host)
         self.posList = []
         self.errList = []
+        self.counter = 0
+        self.counter2 = 0
+        self.length = 2
+        self.endCycle = False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -84,29 +88,20 @@ class MyRob(CRobLinkAngs):
         compass = self.measures.compass
         x = self.measures.x
         y = self.measures.y
+        self.posList.append(x)
 
-        self.moveFront(2, 0.2, 3, 0.001)
+        if self.endCycle:
+            if center_sensor > 1.2:
+                print('I have a wall in front of me, rotating to an open space')
+                self.converter(0, 0.2)
+            else:
+                print('Open field, coming through!')
+                self.endCycle = False
+        else:
+            self.endCycle = self.moveFront(50, 0.01, 0.00005)
 
-        # if counter >= 2:
-        #     linVel = self.getLinVel(x, 1)
-        #     # self.errorCalculator(lvSet, linVel)
-        #     # lin = self.PIDControler(linVel, 0, 0, 0)
-        #     lin = 0.15
-        #     rot = 0
-        #     print(linVel)
-        # else:
-        #     lin = 0.15
-        #     rot = 0
-        #     self.errorCalculator(lvSet, lin)
-        #
-        # self.converter(lin, rot)
-        # counter += 1
-        # if center_sensor < 5.0 and center_sensor > 0.2:
-        #     lin = 0.15 / center_sensor
-        # elif center_sensor < 0.2:
-        #     lin = 0.15
-        # else:
-        #     lin = 0
+
+
 
         
 
@@ -115,61 +110,34 @@ class MyRob(CRobLinkAngs):
 
         f.close()
 
+    def moveFront(self, Kp, Kd, Ki):
+        if self.counter == 0:
+            xin = self.measures.x
+            self.xobj = xin + self.length
+            self.lin = 0.15
+            self.integral = 0
 
-    def getLinVel(self, list, timeInt):
-        currPos = self.posList[-1]
-        prevPos = self.posList[-2]
+        err = self.xobj - self.measures.x
+        # print(err)
+        if self.lin != 0:
+            diff = err / self.lin
+        else:
+            diff = 100
+        self.integral += err
+        self.lin = Kp * err + Kd * diff + Ki * self.integral
+        self.length = err
+        self.converter(self.lin, 0)
+        self.counter += 1
 
-        linVel = (currPos - prevPos) / timeInt
-
-        return linVel
-
-    def getAngVel(self, currAng, timeInt):
-        global prevAng
-
-        if prevAng is None:
-            prevAng = 0
-
-        angVel = currAng - prevAng / timeInt
-        prevAng = currAng
-
-        return angVel
-
-    def errorCalculator(self, setpoint, current):
-        error = setpoint - current
-        self.errList.append(error)
-        return
-
-    def PIDControler(self,  prev, K0, K1, K2):
-        error_3 = self.errList[-3]
-        error_2 = self.errList[-2]
-        error_1 = self.errList[-1]
-
-        vel = prev + K0 * error_1 + K1 * error_2 + K2 * error_3
-        print('sent vel: ' + str(vel))
-
-        return vel
-
-    def moveFront(self, length, Kp, Kd, Ki):
-        xin = self.measures.x
-        xobj = xin + length
-        lin = 0.15
-        integral = 0
-        print('test')
-        while length > 0:
-            x = self.measures.x
-            err = xobj - x
-            print(err)
-            diff = err / lin
-            integral += err
-            lin = Kp * err + Kd * diff + Ki * integral
-            print(lin)
-            length -= err
-            print('length: ' + str(length))
-            self.converter(lin, 0)
-
-
-
+        if self.length == 0:
+            self.counter2 += 1
+            if self.counter2 == 2:
+                self.counter = 0
+                self.counter2 = 0
+                self.length = 2
+                print('Mapping...')
+                return True
+        return False
 
     def converter(self, lin, rot):
         left_motor = lin - rot / 2
