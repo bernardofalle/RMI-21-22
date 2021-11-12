@@ -23,6 +23,7 @@ class MyRob(CRobLinkAngs):
         self.lengthrot = 2
         self.endCycle = False
         self.onRot = False
+        self.minus = False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -86,7 +87,7 @@ class MyRob(CRobLinkAngs):
         center_sensor = self.measures.irSensor[center_id]
 
         self.gpsConverter()
-        print(self.measures.compass)
+        print('Compass: ' + str(self.measures.compass))
         if self.endCycle:
             if center_sensor > 1.2 or self.onRot:
                 if self.counterfree == 0:
@@ -118,6 +119,8 @@ class MyRob(CRobLinkAngs):
         :param Ki:
         :return:
         """
+
+        # Choosing between situations
         current = self.corrCompass()
         if current == 0:
             if self.counter == 0:
@@ -125,6 +128,7 @@ class MyRob(CRobLinkAngs):
                 self.obj = xin + 2
                 self.lin = 0.15
                 self.integral = 0
+                self.minus = False
             err = self.obj - self.measures.x
         elif current == 90:
             if self.counter == 0:
@@ -132,14 +136,16 @@ class MyRob(CRobLinkAngs):
                 self.obj = yin + 2
                 self.lin = 0.15
                 self.integral = 0
+                self.minus = False
             err = self.obj - self.measures.y
-            print('Err: ' + str(err))
+            # print('Err: ' + str(err))
         elif current == 180:
             if self.counter == 0:
                 xin = self.measures.x
                 self.obj = xin - 2
                 self.lin = 0.15
                 self.integral = 0
+                self.minus = True
             err = -self.obj + self.measures.x
         elif current == -90:
             if self.counter == 0:
@@ -147,9 +153,10 @@ class MyRob(CRobLinkAngs):
                 self.obj = yin - 2
                 self.lin = 0.15
                 self.integral = 0
+                self.minus = True
             err = -self.obj + self.measures.y
 
-
+        # Calculates the velocity based on the PID
         if self.lin != 0:
             diff = err / self.lin
         else:
@@ -158,15 +165,27 @@ class MyRob(CRobLinkAngs):
         self.lin = Kp * err + Kd * diff + Ki * self.integral
         self.length = err
 
+        # PID controller to keep the robot moving in a straight line
         objective = current
-        self.rotate(15, 0, 0.1, objective, True)
+        self.rotate(1, 0, 0, objective, True)
 
-        # print('Going with ' + str(self.lin) + ' linear and ' + str(self.rot) + ' angular velocity.')
+        # Limiting the velocities
+        if self.lin > 0.14:
+            self.lin = 0.14
+        if self.rot > 0.14:
+            self.rot = 0.14
+
+        print('Lin: ' + str(self.lin))
+        print('Rot: ' + str(self.rot))
         self.converter(self.lin, self.rot)
         self.counter += 1
 
         if -0.11 < self.length < 0.11:
-            self.obj += 2
+            if self.minus:
+                self.obj -= 2
+            else:
+                self.obj += 2
+
             print('Mapping...')
 
             return True
@@ -186,7 +205,7 @@ class MyRob(CRobLinkAngs):
 
         if self.counter2 == 0:
             self.rot = 0.15
-            self.integral = 0
+            self.integralrot = 0
 
         err = (obj - self.measures.compass) * math.pi / 180
 
@@ -195,8 +214,8 @@ class MyRob(CRobLinkAngs):
             diff = err / self.rot
         else:
             diff = 100
-        self.integral += err
-        self.rot = Kp * err + Kd * diff + Ki * self.integral
+        self.integralrot += err
+        self.rot = Kp * err + Kd * diff + Ki * self.integralrot
         self.lengthrot = err
         if not retrot:
             self.converter(0, self.rot)
