@@ -276,6 +276,9 @@ class MyRob(CRobLinkAngs):
         else:
             print('''I'm lost, please help me''')
 
+        if self.objective <= -180:
+            self.objective += 360
+
     def gpsConverter(self):
         """
         Convert gps coordinates from absolute to relative
@@ -289,6 +292,10 @@ class MyRob(CRobLinkAngs):
         self.measures.y -= self.yin
 
     def checkChangeCompass(self):
+        """
+        If the robot is in any way facing south, toggle a variable
+        :return:
+        """
         if self.objective == 180:
             self.South = True
         else:
