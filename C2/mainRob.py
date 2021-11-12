@@ -21,9 +21,11 @@ class MyRob(CRobLinkAngs):
         self.counterfree = 0
         self.length = 2
         self.lengthrot = 2
+        self.objective = 0
         self.endCycle = False
         self.onRot = False
         self.minus = False
+        self.South = False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -60,7 +62,7 @@ class MyRob(CRobLinkAngs):
                 if self.measures.visitingLed==True:
                     state='wait'
                 if self.measures.ground==0:
-                    self.setVisitingLed(True);
+                    self.setVisitingLed(True)
                 self.wander()
             elif state=='wait':
                 self.setReturningLed(True)
@@ -86,21 +88,29 @@ class MyRob(CRobLinkAngs):
 
         center_sensor = self.measures.irSensor[center_id]
 
+        self.checkChangeCompass()
+        # If you are facing south, offset the compass
+        if self.South and self.measures.compass < -90:
+            self.measures.compass += 360
+
         self.gpsConverter()
-        print('Compass: ' + str(self.measures.compass))
+        # print('Compass: ' + str(self.measures.compass))
         if self.endCycle:
             if center_sensor > 1.2 or self.onRot:
                 if self.counterfree == 0:
                     self.whosFree()
                     print('I have a wall in front of me, rotating to ' + str(self.objective) + 'º')
                     self.counterfree += 1
+                print('Objective: ' + str(self.objective) + '\n Current: ' + str(self.measures.compass))
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
             else:
                 print('Open field, coming through!')
                 self.endCycle = False
                 self.counterfree = 0
+                if self.South:
+                    self.South = False
         else:
-            self.endCycle = self.moveFront(50, 0.01, 0.00005)
+            self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
 
 
 
@@ -187,6 +197,7 @@ class MyRob(CRobLinkAngs):
                 self.obj += 2
 
             print('Mapping...')
+
 
             return True
         return False
@@ -276,6 +287,12 @@ class MyRob(CRobLinkAngs):
             self.countergps += 1
         self.measures.x -= self.xin
         self.measures.y -= self.yin
+
+    def checkChangeCompass(self):
+        if self.objective == 180:
+            self.South = True
+        else:
+            self.South = False
 
 
     def converter(self, lin, rot):
