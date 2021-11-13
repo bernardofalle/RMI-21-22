@@ -26,6 +26,9 @@ class MyRob(CRobLinkAngs):
         self.onRot = False
         self.minus = False
         self.South = False
+        self.maze=Lab()
+        self.last_x=27  
+        self.last_y=13
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -99,12 +102,12 @@ class MyRob(CRobLinkAngs):
             if center_sensor > 1.2 or self.onRot:
                 if self.counterfree == 0:
                     self.whosFree()
-                    print('I have a wall in front of me, rotating to ' + str(self.objective) + 'º')
+                    #print('I have a wall in front of me, rotating to ' + str(self.objective) + 'º')
                     self.counterfree += 1
-                print('Objective: ' + str(self.objective) + '\n Current: ' + str(self.measures.compass))
+                #print('Objective: ' + str(self.objective) + '\n Current: ' + str(self.measures.compass))
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
             else:
-                print('Open field, coming through!')
+                #print('Open field, coming through!')
                 self.endCycle = False
                 self.counterfree = 0
                 if self.South:
@@ -112,13 +115,16 @@ class MyRob(CRobLinkAngs):
         else:
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
 
-
+        self.writeMap()
 
 
 
     def writeMap(self):
-        f=open('mapping.txt','w')
-
+        f=open('mapping.out','w+')
+        for line in self.maze.matrix:
+            for element in line:
+                f.write(element)
+            f.write('\n')    
         f.close()
 
     def moveFront(self, Kp, Kd, Ki):
@@ -185,8 +191,8 @@ class MyRob(CRobLinkAngs):
         if self.rot > 0.14:
             self.rot = 0.14
 
-        print('Lin: ' + str(self.lin))
-        print('Rot: ' + str(self.rot))
+        #print('Lin: ' + str(self.lin))
+        #print('Rot: ' + str(self.rot))
         self.converter(self.lin, self.rot)
         self.counter += 1
 
@@ -198,9 +204,127 @@ class MyRob(CRobLinkAngs):
 
             print('Mapping...')
 
+            if current==0:
+                x=round(self.measures.x)
+                self.walls(0,self.last_x+2,self.last_y)
+                self.maze.matrix[self.last_y][self.last_x+1]='X'
+                self.maze.matrix[self.last_y][self.last_x+2]='X'
+                self.last_x=x+27
+            elif current==90:
+                y=round(self.measures.y)
+                self.walls(90,self.last_x,self.last_y-2)
+                self.maze.matrix[self.last_y-1][self.last_x]='X'
+                self.maze.matrix[self.last_y-2][self.last_x]='X'
+                self.last_y=-y+13
+            elif current==180:
+                x=round(self.measures.x)
+                self.walls(180,self.last_x-2,self.last_y)
+                self.maze.matrix[self.last_y][self.last_x-1]='X'
+                self.maze.matrix[self.last_y][self.last_x-2]='X'
+                self.last_x=x+27
+            elif current==-90:
+                y=round(self.measures.y)
+                self.walls(-90,self.last_x,self.last_y+2)
+                self.maze.matrix[self.last_y+1][self.last_x]='X'
+                self.maze.matrix[self.last_y+2][self.last_x]='X'
+                self.last_y=-y+13
 
             return True
         return False
+
+    def walls(self,compass,x,y):
+        
+        if compass==0:
+            if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.5:
+                print('corner 6')
+                self.maze.matrix[y-1][x]='-'
+                self.maze.matrix[y][x+1]='|'
+            elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
+                print('corner 8')
+                self.maze.matrix[y+1][x]='-'
+                self.maze.matrix[y][x+1]='|'
+            elif self.measures.irSensor[1]>=1.7 and self.measures.irSensor[2]>=1.7:
+                print('both walls')
+                self.maze.matrix[y-1][x]='-'
+                self.maze.matrix[y+1][x]='-'
+            elif self.measures.irSensor[2]>=1.7:
+                print('right wall')
+                self.maze.matrix[y+1][x]='-'
+            elif self.measures.irSensor[1]>=1.7:
+                print('left wall')
+                self.maze.matrix[y-1][x]='-'
+            elif self.measures.irSensor[0]>=1.7:
+                print('wall in front')
+                self.maze.matrix[y][x+1]='|'
+            
+        elif compass==90:
+            if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.5:
+                print('corner 5')
+                self.maze.matrix[y][x-1]='|'
+                self.maze.matrix[y-1][x]='-'
+            elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
+                print('corner 6')
+                self.maze.matrix[y-1][x]='-'
+                self.maze.matrix[y][x+1]='|'
+            elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[1]>=1.7:
+                print('both walls')
+                self.maze.matrix[y][x-1]='|'
+                self.maze.matrix[y][x+1]='|'
+            elif self.measures.irSensor[1]>=1.7:
+                print('left wall')
+                self.maze.matrix[y][x-1]='|'
+            elif self.measures.irSensor[2]>=1.7:
+                print('right wall')
+                self.maze.matrix[y][x+1]='|'
+            elif self.measures.irSensor[0]>=1.7:
+                print('wall in front')
+                self.maze.matrix[y-1][x]='-'
+            
+        elif compass==180:
+            if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.7:
+                print('corner 7')
+                self.maze.matrix[y+1][x]='-'
+                self.maze.matrix[y][x-1]='|'
+            elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
+                print('corner 5')
+                self.maze.matrix[y-1][x]='-'
+                self.maze.matrix[y][x-1]='|'
+            elif self.measures.irSensor[1]>=1.7 and self.measures.irSensor[2]>=1.7:
+                print('both walls')
+                self.maze.matrix[y-1][x]='-'
+                self.maze.matrix[y+1][x]='-'
+            elif self.measures.irSensor[1]>=1.7:
+                print('left wall')
+                self.maze.matrix[y+1][x]='-'
+            elif self.measures.irSensor[2]>=1.7:
+                print('right wall')
+                self.maze.matrix[y-1][x]='-'
+            elif self.measures.irSensor[0]>=1.7:
+                print('wall in front')
+                self.maze.matrix[y][x-1]='|'
+            
+        elif compass==-90:
+            if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.7:
+                print('corner 8')
+                self.maze.matrix[y][x+1]='|'
+                self.maze.matrix[y+1][x]='-'
+            elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
+                print('corner 7')
+                self.maze.matrix[y][x-1]='|'
+                self.maze.matrix[y+1][x]='-'
+            elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[1]>=1.7:
+                print('both walls')
+                self.maze.matrix[y][x-1]='|'
+                self.maze.matrix[y][x+1]='|'
+            elif self.measures.irSensor[1]>=1.5:
+                print('left wall')
+                self.maze.matrix[y][x+1]='|'
+            elif self.measures.irSensor[2]>=1.7:
+                print('right wall')
+                self.maze.matrix[y][x-1]='|'
+            elif self.measures.irSensor[0]>=1.7:
+                print('wall in front')
+                self.maze.matrix[y+1][x]='-'
 
     def rotate(self, Kp, Kd, Ki, obj, retrot):
         """
@@ -239,7 +363,7 @@ class MyRob(CRobLinkAngs):
 
         if -0.005 < self.lengthrot < 0.005:
             self.counter2 = 0
-            print('Turned to ' + str(obj) + 'º')
+            #print('Turned to ' + str(obj) + 'º')
             return False
         return True
 
@@ -309,8 +433,11 @@ class MyRob(CRobLinkAngs):
 
 class Lab():
     def __init__(self):
-        self.colunms=[' ']*(CELLCOLS*4-1)
-        self.rows=[' ']*(CELLROWS*4-1)
+        self.matrix=[[' ']*55]
+
+        for m in range(26):
+            self.matrix.insert(0,[' ']*55)
+        self.matrix[13][27]='I'
     
 class Map():
     def __init__(self, filename):
