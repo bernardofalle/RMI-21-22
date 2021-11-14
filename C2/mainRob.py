@@ -140,7 +140,7 @@ class MyRob(CRobLinkAngs):
         current = self.corrCompass()
         if current == 0:
             if self.counter == 0:
-                xin = self.measures.x
+                xin = round(self.measures.x)
                 self.obj = xin + 2
                 self.lin = 0.15
                 self.integral = 0
@@ -148,7 +148,7 @@ class MyRob(CRobLinkAngs):
             err = self.obj - self.measures.x
         elif current == 90:
             if self.counter == 0:
-                yin = self.measures.y
+                yin = round(self.measures.y)
                 self.obj = yin + 2
                 self.lin = 0.15
                 self.integral = 0
@@ -157,7 +157,7 @@ class MyRob(CRobLinkAngs):
             # print('Err: ' + str(err))
         elif current == 180:
             if self.counter == 0:
-                xin = self.measures.x
+                xin = round(self.measures.x)
                 self.obj = xin - 2
                 self.lin = 0.15
                 self.integral = 0
@@ -165,7 +165,7 @@ class MyRob(CRobLinkAngs):
             err = -self.obj + self.measures.x
         elif current == -90:
             if self.counter == 0:
-                yin = self.measures.y
+                yin = round(self.measures.y)
                 self.obj = yin - 2
                 self.lin = 0.15
                 self.integral = 0
@@ -195,6 +195,8 @@ class MyRob(CRobLinkAngs):
         #print('Rot: ' + str(self.rot))
         self.converter(self.lin, self.rot)
         self.counter += 1
+
+        print('Y: ' + str(self.measures.y) + 'Obj: ' + str(self.obj))
 
         if -0.11 < self.length < 0.11:
             if self.minus:
