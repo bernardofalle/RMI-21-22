@@ -27,8 +27,10 @@ class MyRob(CRobLinkAngs):
         self.minus = False
         self.South = False
         self.maze=Lab()
-        self.last_x=27  
-        self.last_y=13
+        self.last_x = 27
+        self.last_y = 13
+        self.unknown = []
+        self.known = []
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -91,28 +93,38 @@ class MyRob(CRobLinkAngs):
 
         center_sensor = self.measures.irSensor[center_id]
 
+        # Offset the gps, making the coordinates relative to the starting point
+        self.gpsConverter()
+
+        # Check if the compass is facing south
         self.checkChangeCompass()
+
         # If you are facing south, offset the compass
         if self.South and self.measures.compass < -90:
             self.measures.compass += 360
 
-        self.gpsConverter()
-        # print('Compass: ' + str(self.measures.compass))
+        # If you have travelled a distance of 2
         if self.endCycle:
+            # Check if there is a wall in front of you or you are rotating
             if center_sensor > 1.2 or self.onRot:
+                # If it's the first time it is running this cycle, check the surrounding
+                # environment for a free space to go to
                 if self.counterfree == 0:
                     self.whosFree()
-                    #print('I have a wall in front of me, rotating to ' + str(self.objective) + 'º')
                     self.counterfree += 1
-                #print('Objective: ' + str(self.objective) + '\n Current: ' + str(self.measures.compass))
+                # Start rotating to the available free space. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
             else:
-                #print('Open field, coming through!')
+                # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
+                # restart variables and annotate known and unknown variables
+                repeat = self.searchKnown()
+                self.searchUnknown()
                 self.endCycle = False
                 self.counterfree = 0
                 if self.South:
                     self.South = False
         else:
+            # If you are not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
 
         self.writeMap()
@@ -154,7 +166,6 @@ class MyRob(CRobLinkAngs):
                 self.integral = 0
                 self.minus = False
             err = self.obj - self.measures.y
-            # print('Err: ' + str(err))
         elif current == 180:
             if self.counter == 0:
                 xin = round(self.measures.x)
@@ -191,12 +202,9 @@ class MyRob(CRobLinkAngs):
         if self.rot > 0.14:
             self.rot = 0.14
 
-        #print('Lin: ' + str(self.lin))
-        #print('Rot: ' + str(self.rot))
         self.converter(self.lin, self.rot)
         self.counter += 1
 
-        print('Y: ' + str(self.measures.y) + 'Obj: ' + str(self.obj))
 
         if -0.11 < self.length < 0.11:
             if self.minus:
@@ -339,7 +347,6 @@ class MyRob(CRobLinkAngs):
         :return:
         """
 
-
         if self.counter2 == 0:
             self.rot = 0.15
             self.integralrot = 0
@@ -357,15 +364,11 @@ class MyRob(CRobLinkAngs):
         if not retrot:
             self.converter(0, self.rot)
             self.counter = 0
-        else:
-            a = 1
-            # print('Integral: ' + str(self.integral) + '\n Diff: ' + str(diff) + '\n Err: ' + str(err))
         self.counter2 += 1
 
 
         if -0.005 < self.lengthrot < 0.005:
             self.counter2 = 0
-            #print('Turned to ' + str(obj) + 'º')
             return False
         return True
 
@@ -374,6 +377,7 @@ class MyRob(CRobLinkAngs):
         Corrects the compass position to the nearest cardinal point
         :return:
         """
+
         current = self.measures.compass
         if -45 < current < 45:
             current = 0
@@ -383,13 +387,13 @@ class MyRob(CRobLinkAngs):
             current = 180
         elif -100 < current < -80:
             current = -90
+
         return current
 
     def whosFree(self):
         """
         See which direction has a wall
         """
-
 
         current = self.corrCompass()
 
@@ -410,6 +414,7 @@ class MyRob(CRobLinkAngs):
         Convert gps coordinates from absolute to relative
         :return:
         """
+
         if self.countergps == 0:
             self.xin = self.measures.x
             self.yin = self.measures.y
@@ -427,8 +432,62 @@ class MyRob(CRobLinkAngs):
         else:
             self.South = False
 
+    def searchUnknown(self):
+        """
+        Search in all 4 directions for empty spaces and places them on a list
+        :return:
+        """
+        # Get GPS and compass values
+        x = round(self.measures.x)
+        y = round(self.measures.y)
+        current = radians(self.corrCompass())
+        entries = []
+
+        # If a surrounding cell is empty, add it to the list
+        if self.measures.irSensor[0] < 1:
+            entries.append((x + round(2*cos(current)), y + round(2*sin(current))))
+        if self.measures.irSensor[1] < 1:
+            entries.append((x + round(2*cos(current + pi/2)), y + round(2*sin(current + pi/2))))
+        if self.measures.irSensor[3] < 1:
+            entries.append((x + round(2*cos(current + pi)), y + round(2*sin(current + pi))))
+        if self.measures.irSensor[2] < 1:
+            entries.append((x + round(2*cos(current - pi/2)), y + round(2*sin(current - pi/2))))
+
+        for entry in entries:
+            if entry not in self.unknown and entry not in self.known:
+                self.unknown.append(entry)
+
+    def searchKnown(self):
+        """
+        When the robot is in a cell, it's certain that cell is empty. Append it to a list.
+        :return:
+        """
+        # Get GPS values
+        x = round(self.measures.x)
+        y = round(self.measures.y)
+        entry = (x, y)
+
+        # Append the coordinates if they are not there already, and remove if on unknown
+        if entry in self.unknown:
+            self.unknown.remove(entry)
+        if entry not in self.known:
+            self.known.append(entry)
+            return False
+        else:
+            return True
+
+
+
+
+
 
     def converter(self, lin, rot):
+        """
+        Converts the value of linear and angular velocity in motor rotation
+        :param lin: Float32
+        :param rot: Float32
+        :return:
+        """
         left_motor = lin - rot / 2
         right_motor = lin + rot / 2
         self.driveMotors(left_motor, right_motor)
