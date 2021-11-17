@@ -5,6 +5,7 @@ from croblink import *
 from math import *
 import xml.etree.ElementTree as ET
 from time import sleep
+from astar import *
 
 
 CELLROWS=7
@@ -31,6 +32,8 @@ class MyRob(CRobLinkAngs):
         self.last_y = 13
         self.unknown = []
         self.known = []
+        self.path=[]
+        self.searching=False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -114,6 +117,63 @@ class MyRob(CRobLinkAngs):
                     self.counterfree += 1
                 # Start rotating to the available free space. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
+            elif self.searching==True:
+
+                    if len(self.path)>1:
+                        x,y=(self.path[1][0]-self.path[0][0]),(self.path[1][1]-self.path[0][1])
+
+                        if x<0:
+                            self.onRot=self.rotate(3,0,0,180,False)
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=self.path[1:]
+                        elif x>0:
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=self.path[1:]
+                        elif y<0:
+                            self.onRot=self.rotate(3,0,0,-90,False)
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=self.path[1:]
+                        elif y>0:
+                            self.onRot=self.rotate(3,0,0,90,False)
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=self.path[1:]
+                    
+                    elif len(self.path)==1:
+                        
+                        loc=round(self.measures.x),round(self.measures.y)
+                        print(loc)
+                        print('location\n')
+                        
+                        x,y=(self.path[0][0]-loc[0]),(self.path[0][1]-loc[1])
+                        if x<0:
+                            self.onRot=self.rotate(3,0,0,180,False)
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=[]
+                            self.known.append(self.unknown[0])
+                            self.unknown=self.unknown[1:]
+                            self.searching=False
+                        elif x>0:
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=[]
+                            self.known.append(self.unknown[0])
+                            self.unknown=self.unknown[1:]
+                            self.searching=False
+                        elif y<0:
+                            self.onRot=self.rotate(3,0,0,-90,False)
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=[]
+                            self.known.append(self.unknown[0])
+                            self.unknown=self.unknown[1:]
+                            self.searching=False
+                        elif y>0:
+                            self.onRot=self.rotate(3,0,0,90,False)
+                            self.moveFront(0.1,0.01,0.00005)
+                            self.path=[]
+                            self.known.append(self.unknown[0])
+                            self.unknown=self.unknown[1:]
+                            self.searching=False
+
+
             else:
                 # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
                 # restart variables and annotate known and unknown variables
@@ -126,7 +186,9 @@ class MyRob(CRobLinkAngs):
         else:
             # If you are not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
-
+        #print(self.known)
+        #print(self.unknown)
+        
         self.writeMap()
 
 
@@ -213,6 +275,12 @@ class MyRob(CRobLinkAngs):
                 self.obj += 2
 
             print('Mapping...')
+
+            print(self.path)
+            start=round(self.measures.x),round(self.measures.y)
+            if start in self.known and self.searching is False:
+                self.a(start,self.unknown[0])
+                self.searching=True
 
             if current==0:
                 x=round(self.measures.x)
@@ -390,6 +458,14 @@ class MyRob(CRobLinkAngs):
 
         return current
 
+    def a(self,start,goal):
+        neighbours=[(0,2),(0,-2),(2,0),(-2,0)]
+
+        for i,j in neighbours:
+            neigh=goal[0]+i,goal[1]+j
+            if neigh in self.known:
+                 self.path=astar(self.known,start,neigh)
+
     def whosFree(self):
         """
         See which direction has a wall
@@ -475,11 +551,6 @@ class MyRob(CRobLinkAngs):
             return False
         else:
             return True
-
-
-
-
-
 
     def converter(self, lin, rot):
         """
