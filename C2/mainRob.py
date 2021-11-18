@@ -34,7 +34,7 @@ class MyRob(CRobLinkAngs):
         self.known = [(0, 0)]
         self.path=[]
         self.searching=False
-        self.target=None,None
+        self.walked = [(0, 0)]
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -160,7 +160,8 @@ class MyRob(CRobLinkAngs):
             else:
                 # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
                 # restart variables and annotate known and unknown variables
-                
+
+                self.appendWalked()
                 self.amknown = self.searchKnown()
                 me=round(self.measures.x),round(self.measures.y)
                 print(self.known)
@@ -506,6 +507,14 @@ class MyRob(CRobLinkAngs):
         else:
             self.South = False
 
+    def appendWalked(self):
+        # Get GPS values
+        x = round(self.measures.x)
+        y = round(self.measures.y)
+        self.walked.append((x, y))
+
+
+
     def searchUnknown(self):
         """
         Search in all 4 directions for empty spaces and places them on a list
@@ -519,13 +528,13 @@ class MyRob(CRobLinkAngs):
 
         # If a surrounding cell is empty, add it to the list
         if self.measures.irSensor[0] < 1:
-            entries.append((x + round(2*cos(current)), y + round(2*sin(current))))
+            entries.append((x + round(cos(current)), y + round(sin(current))))
         if self.measures.irSensor[1] < 1:
-            entries.append((x + round(2*cos(current + pi/2)), y + round(2*sin(current + pi/2))))
+            entries.append((x + round(cos(current + pi/2)), y + round(sin(current + pi/2))))
         if self.measures.irSensor[3] < 1:
-            entries.append((x + round(2*cos(current + pi)), y + round(2*sin(current + pi))))
+            entries.append((x + round(cos(current + pi)), y + round(sin(current + pi))))
         if self.measures.irSensor[2] < 1:
-            entries.append((x + round(2*cos(current - pi/2)), y + round(2*sin(current - pi/2))))
+            entries.append((x + round(cos(current - pi/2)), y + round(sin(current - pi/2))))
 
         for entry in entries:
             if entry not in self.unknown and entry not in self.known:
@@ -540,10 +549,15 @@ class MyRob(CRobLinkAngs):
         x = round(self.measures.x)
         y = round(self.measures.y)
         entry = (x, y)
-        print(entry)
+        last_entry = self.walked[-2]
+        mid_entry = (int((last_entry[0] + entry[0])/2), (int((last_entry[1] + entry[1])/2)))
         # Append the coordinates if they are not there already, and remove if on unknown
         if entry in self.unknown:
             self.unknown.remove(entry)
+        if mid_entry in self.unknown:
+            self.unknown.remove(mid_entry)
+        if mid_entry not in self.known:
+            self.known.append(mid_entry)
         if entry not in self.known:
             print('entersdfafasf')
             self.known.append(entry)
