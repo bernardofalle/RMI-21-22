@@ -34,6 +34,7 @@ class MyRob(CRobLinkAngs):
         self.known = [(0, 0)]
         self.path=[]
         self.searching=False
+        self.target=None,None
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -109,13 +110,17 @@ class MyRob(CRobLinkAngs):
         # If you have travelled a distance of 2
         if self.endCycle:
             # Check if there is a wall in front of you or you are rotating
+            self.searching=False
             if center_sensor > 1.2 or self.onRot:
                 # If it's the first time it is running this cycle, check the surrounding
                 # environment for a free space to go to
+                #print(self.counterfree)
+                #print(self.searching)
                 if self.counterfree == 0:
                     if self.searching:
                         self.searching = False
                     else:
+                        print('werq')
                         self.whosFree()
                     self.counterfree += 1
 
@@ -129,16 +134,20 @@ class MyRob(CRobLinkAngs):
                     loc = round(self.measures.x), round(self.measures.y)
                     x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
                     print('Loc: ' + str(loc))
-                    print('X: ' + str(x) + ' Y: ' + str(y))
+                    #print('X: ' + str(x) + ' Y: ' + str(y))
                     self.onRot = True
                     if x < 0:
                         self.objective = 180
+                        print('rotating 180')
                     elif x > 0:
                         self.objective = 0
+                        print('coming through')
                     elif y < 0:
                         self.objective = -90
+                        print('rotating -90')
                     elif y > 0:
                         self.objective = 90
+                        print('rotating 90')
                     else:
                         print('Test')
                         self.onRot = False
@@ -147,24 +156,31 @@ class MyRob(CRobLinkAngs):
 
                     if len(self.path) == 1:
                         self.path = []
-                        self.searching = False
-
-
-
+                        self.counterfree=0
+                        #self.known.append(self.unknown[0])
+                        #self.unknown=self.unknown[1:]
+                        self.searching=False
             else:
                 # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
                 # restart variables and annotate known and unknown variables
+                
                 self.amknown = self.searchKnown()
+                me=round(self.measures.x),round(self.measures.y)
+                print(self.known)
                 self.searchUnknown()
                 self.endCycle = False
                 self.counterfree = 0
+                print(self.amknown)
                 if self.South:
                     self.South = False
                 if self.amknown:
-                    start = round(self.measures.x), round(self.measures.y)
+                    start=round(self.measures.x),round(self.measures.y)
                     self.a(start, self.unknown[0])
                     self.path.append(self.unknown[0])
+                    print('debug')
                     self.searching = True
+                else:
+                    self.searching=False
         else:
             # If you are not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
@@ -259,10 +275,10 @@ class MyRob(CRobLinkAngs):
             print('Mapping...')
 
             # print(self.path)
-
-            # if start in self.known and self.searching is False:
-            #     self.a(start,self.unknown[0])
-            #     self.searching=True
+            
+            #if start in self.known and self.searching is False:
+            #    self.a(start,self.unknown[0])
+            #    self.searching=True
 
             if current==0:
                 x=round(self.measures.x)
@@ -461,11 +477,14 @@ class MyRob(CRobLinkAngs):
             self.objective = current - 90
         elif self.measures.irSensor[3] < 1:
             self.objective = current + 180
+            print(self.objective)
         else:
             print('''I'm lost, please help me''')
 
         if self.objective <= -180:
             self.objective += 360
+        if self.objective >=360:
+            self.objective -=360
 
     def gpsConverter(self):
         """
@@ -524,11 +543,12 @@ class MyRob(CRobLinkAngs):
         x = round(self.measures.x)
         y = round(self.measures.y)
         entry = (x, y)
-
+        print(entry)
         # Append the coordinates if they are not there already, and remove if on unknown
         if entry in self.unknown:
             self.unknown.remove(entry)
         if entry not in self.known:
+            print('entersdfafasf')
             self.known.append(entry)
             return False
         else:
