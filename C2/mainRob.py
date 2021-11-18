@@ -110,19 +110,13 @@ class MyRob(CRobLinkAngs):
         # If you have travelled a distance of 2
         if self.endCycle:
             # Check if there is a wall in front of you or you are rotating
-            self.searching=False
-            if center_sensor > 1.2 or self.onRot:
+            if self.onRot:
                 # If it's the first time it is running this cycle, check the surrounding
                 # environment for a free space to go to
                 #print(self.counterfree)
                 #print(self.searching)
-                if self.counterfree == 0:
-                    if self.searching:
-                        self.searching = False
-                    else:
-                        print('werq')
-                        self.whosFree()
-                    self.counterfree += 1
+                self.searching = False
+
 
                 # Start rotating to the available free space. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
@@ -160,6 +154,9 @@ class MyRob(CRobLinkAngs):
                         #self.known.append(self.unknown[0])
                         #self.unknown=self.unknown[1:]
                         self.searching=False
+            elif center_sensor > 1.2:
+                self.whosFree()
+                self.onRot = True
             else:
                 # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
                 # restart variables and annotate known and unknown variables
