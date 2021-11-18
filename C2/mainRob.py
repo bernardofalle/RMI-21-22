@@ -31,7 +31,7 @@ class MyRob(CRobLinkAngs):
         self.last_x = 27
         self.last_y = 13
         self.unknown = []
-        self.known = []
+        self.known = [(0, 0)]
         self.path=[]
         self.searching=False
 
@@ -113,76 +113,58 @@ class MyRob(CRobLinkAngs):
                 # If it's the first time it is running this cycle, check the surrounding
                 # environment for a free space to go to
                 if self.counterfree == 0:
-                    self.whosFree()
+                    if self.searching:
+                        self.searching = False
+                    else:
+                        self.whosFree()
                     self.counterfree += 1
+
                 # Start rotating to the available free space. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
-            elif self.searching==True:
+            elif self.searching:
+                    print('Searching')
 
-                    if len(self.path)>1:
-                        x,y=(self.path[1][0]-self.path[0][0]),(self.path[1][1]-self.path[0][1])
+                    self.path = self.path[1:]
+                    print('Path: ' + str(self.path))
+                    loc = round(self.measures.x), round(self.measures.y)
+                    x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
+                    print('Loc: ' + str(loc))
+                    print('X: ' + str(x) + ' Y: ' + str(y))
+                    self.onRot = True
+                    if x < 0:
+                        self.objective = 180
+                    elif x > 0:
+                        self.objective = 0
+                    elif y < 0:
+                        self.objective = -90
+                    elif y > 0:
+                        self.objective = 90
+                    else:
+                        print('Test')
+                        self.onRot = False
 
-                        if x<0:
-                            self.onRot=self.rotate(3,0,0,180,False)
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=self.path[1:]
-                        elif x>0:
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=self.path[1:]
-                        elif y<0:
-                            self.onRot=self.rotate(3,0,0,-90,False)
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=self.path[1:]
-                        elif y>0:
-                            self.onRot=self.rotate(3,0,0,90,False)
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=self.path[1:]
-                    
-                    elif len(self.path)==1:
-                        
-                        loc=round(self.measures.x),round(self.measures.y)
-                        print(loc)
-                        print('location\n')
-                        
-                        x,y=(self.path[0][0]-loc[0]),(self.path[0][1]-loc[1])
-                        if x<0:
-                            self.onRot=self.rotate(3,0,0,180,False)
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=[]
-                            self.known.append(self.unknown[0])
-                            self.unknown=self.unknown[1:]
-                            self.searching=False
-                        elif x>0:
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=[]
-                            self.known.append(self.unknown[0])
-                            self.unknown=self.unknown[1:]
-                            self.searching=False
-                        elif y<0:
-                            self.onRot=self.rotate(3,0,0,-90,False)
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=[]
-                            self.known.append(self.unknown[0])
-                            self.unknown=self.unknown[1:]
-                            self.searching=False
-                        elif y>0:
-                            self.onRot=self.rotate(3,0,0,90,False)
-                            self.moveFront(0.1,0.01,0.00005)
-                            self.path=[]
-                            self.known.append(self.unknown[0])
-                            self.unknown=self.unknown[1:]
-                            self.searching=False
+
+
+                    if len(self.path) == 1:
+                        self.path = []
+                        self.searching = False
+
 
 
             else:
                 # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
                 # restart variables and annotate known and unknown variables
-                repeat = self.searchKnown()
+                self.amknown = self.searchKnown()
                 self.searchUnknown()
                 self.endCycle = False
                 self.counterfree = 0
                 if self.South:
                     self.South = False
+                if self.amknown:
+                    start = round(self.measures.x), round(self.measures.y)
+                    self.a(start, self.unknown[0])
+                    self.path.append(self.unknown[0])
+                    self.searching = True
         else:
             # If you are not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
@@ -276,11 +258,11 @@ class MyRob(CRobLinkAngs):
 
             print('Mapping...')
 
-            print(self.path)
-            start=round(self.measures.x),round(self.measures.y)
-            if start in self.known and self.searching is False:
-                self.a(start,self.unknown[0])
-                self.searching=True
+            # print(self.path)
+
+            # if start in self.known and self.searching is False:
+            #     self.a(start,self.unknown[0])
+            #     self.searching=True
 
             if current==0:
                 x=round(self.measures.x)
@@ -551,6 +533,8 @@ class MyRob(CRobLinkAngs):
             return False
         else:
             return True
+
+
 
     def converter(self, lin, rot):
         """

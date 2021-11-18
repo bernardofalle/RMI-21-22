@@ -18,7 +18,7 @@ def astar(array, start, goal):
     while oheap:
 
         current = heappop(oheap)[1]
-        print(current)
+        # print(current)
 
         if current == goal:
             data = []
@@ -28,7 +28,7 @@ def astar(array, start, goal):
                 data.append(current)
                 current = came_from[current]
             #data.append(start)
-            print(c)
+            # print(c)
             return [start] + data[::-1]
 
         close_set.add(current)
