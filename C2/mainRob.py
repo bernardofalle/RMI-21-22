@@ -123,13 +123,14 @@ class MyRob(CRobLinkAngs):
             elif self.searching:
                     print('Searching')
 
-                    self.path = self.path[1:]
+                    #self.path = self.path[1:]
                     print('Path: ' + str(self.path))
                     loc = round(self.measures.x), round(self.measures.y)
-                    x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
-                    print('Loc: ' + str(loc))
+                    x, y = (self.path[1][0] - loc[0]), (self.path[1][1] - loc[1])
+                    print('in-> ' + str(loc))
                     #print('X: ' + str(x) + ' Y: ' + str(y))
                     self.onRot = True
+                    self.path=self.path[1:]
                     if x < 0:
                         self.objective = 180
                         print('rotating 180')
@@ -163,20 +164,21 @@ class MyRob(CRobLinkAngs):
 
                 self.appendWalked()
                 self.amknown = self.searchKnown()
-                me=round(self.measures.x),round(self.measures.y)
                 print(self.known)
+                print(self.unknown)
                 self.searchUnknown()
                 self.endCycle = False
                 self.counterfree = 0
-                print(self.amknown)
                 if self.South:
                     self.South = False
                 if self.amknown:
                     start=round(self.measures.x),round(self.measures.y)
+                    print('started search in-> '+str(start))
+
                     self.a(start, self.unknown[0])
                     self.path.append(self.unknown[0])
-                    print('debug')
                     self.searching = True
+                    
                 else:
                     self.searching=False
         else:
@@ -310,94 +312,94 @@ class MyRob(CRobLinkAngs):
         
         if compass==0:
             if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.5:
-                print('corner 6')
+                #print('corner 6')
                 self.maze.matrix[y-1][x]='-'
                 self.maze.matrix[y][x+1]='|'
             elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
-                print('corner 8')
+                #print('corner 8')
                 self.maze.matrix[y+1][x]='-'
                 self.maze.matrix[y][x+1]='|'
             elif self.measures.irSensor[1]>=1.7 and self.measures.irSensor[2]>=1.7:
-                print('both walls')
+                #print('both walls')
                 self.maze.matrix[y-1][x]='-'
                 self.maze.matrix[y+1][x]='-'
             elif self.measures.irSensor[2]>=1.7:
-                print('right wall')
+                #print('right wall')
                 self.maze.matrix[y+1][x]='-'
             elif self.measures.irSensor[1]>=1.7:
-                print('left wall')
+                #print('left wall')
                 self.maze.matrix[y-1][x]='-'
             elif self.measures.irSensor[0]>=1.7:
-                print('wall in front')
+                #print('wall in front')
                 self.maze.matrix[y][x+1]='|'
             
         elif compass==90:
             if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.5:
-                print('corner 5')
+                #print('corner 5')
                 self.maze.matrix[y][x-1]='|'
                 self.maze.matrix[y-1][x]='-'
             elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
-                print('corner 6')
+                #print('corner 6')
                 self.maze.matrix[y-1][x]='-'
                 self.maze.matrix[y][x+1]='|'
             elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[1]>=1.7:
-                print('both walls')
+                #print('both walls')
                 self.maze.matrix[y][x-1]='|'
                 self.maze.matrix[y][x+1]='|'
             elif self.measures.irSensor[1]>=1.7:
-                print('left wall')
+                #print('left wall')
                 self.maze.matrix[y][x-1]='|'
             elif self.measures.irSensor[2]>=1.7:
-                print('right wall')
+                #print('right wall')
                 self.maze.matrix[y][x+1]='|'
             elif self.measures.irSensor[0]>=1.7:
-                print('wall in front')
+                #print('wall in front')
                 self.maze.matrix[y-1][x]='-'
             
         elif compass==180:
             if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.7:
-                print('corner 7')
+                #print('corner 7')
                 self.maze.matrix[y+1][x]='-'
                 self.maze.matrix[y][x-1]='|'
             elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
-                print('corner 5')
+                #print('corner 5')
                 self.maze.matrix[y-1][x]='-'
                 self.maze.matrix[y][x-1]='|'
             elif self.measures.irSensor[1]>=1.7 and self.measures.irSensor[2]>=1.7:
-                print('both walls')
+                #print('both walls')
                 self.maze.matrix[y-1][x]='-'
                 self.maze.matrix[y+1][x]='-'
             elif self.measures.irSensor[1]>=1.7:
-                print('left wall')
+                #print('left wall')
                 self.maze.matrix[y+1][x]='-'
             elif self.measures.irSensor[2]>=1.7:
-                print('right wall')
+                #print('right wall')
                 self.maze.matrix[y-1][x]='-'
             elif self.measures.irSensor[0]>=1.7:
-                print('wall in front')
+                #print('wall in front')
                 self.maze.matrix[y][x-1]='|'
             
         elif compass==-90:
             if self.measures.irSensor[1]>=1.7 and self.measures.irSensor[0]>=1.7:
-                print('corner 8')
+                #print('corner 8')
                 self.maze.matrix[y][x+1]='|'
                 self.maze.matrix[y+1][x]='-'
             elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[0]>=1.7:
-                print('corner 7')
+                #print('corner 7')
                 self.maze.matrix[y][x-1]='|'
                 self.maze.matrix[y+1][x]='-'
             elif self.measures.irSensor[2]>=1.7 and self.measures.irSensor[1]>=1.7:
-                print('both walls')
+                #print('both walls')
                 self.maze.matrix[y][x-1]='|'
                 self.maze.matrix[y][x+1]='|'
             elif self.measures.irSensor[1]>=1.5:
-                print('left wall')
+                #print('left wall')
                 self.maze.matrix[y][x+1]='|'
             elif self.measures.irSensor[2]>=1.7:
-                print('right wall')
+                #print('right wall')
                 self.maze.matrix[y][x-1]='|'
             elif self.measures.irSensor[0]>=1.7:
-                print('wall in front')
+                #print('wall in front')
                 self.maze.matrix[y+1][x]='-'
 
     def rotate(self, Kp, Kd, Ki, obj, retrot):
@@ -455,11 +457,11 @@ class MyRob(CRobLinkAngs):
         return current
 
     def a(self,start,goal):
-        neighbours=[(0,2),(0,-2),(2,0),(-2,0)]
+        neighbours=[(0,1),(0,-1),(1,0),(-1,0)]
 
         for i,j in neighbours:
             neigh=goal[0]+i,goal[1]+j
-            if neigh in self.known:
+            if neigh in self.known and neigh[0]%2==0 and neigh[1]%2==0:
                  self.path=astar(self.known,start,neigh)
 
     def whosFree(self):
@@ -559,7 +561,6 @@ class MyRob(CRobLinkAngs):
         if mid_entry not in self.known:
             self.known.append(mid_entry)
         if entry not in self.known:
-            print('entersdfafasf')
             self.known.append(entry)
             return False
         else:
