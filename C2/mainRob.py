@@ -35,6 +35,7 @@ class MyRob(CRobLinkAngs):
         self.path=[]
         self.searching=False
         self.walked = [(0, 0)]
+        self.front = False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -109,20 +110,22 @@ class MyRob(CRobLinkAngs):
 
         # If you have travelled a distance of 2
         if self.endCycle:
+            # self.front = False
+            # print("Path calculated: " + str(self.searching))
             # Check if there is a wall in front of you or you are rotating
             if self.onRot:
                 # If it's the first time it is running this cycle, check the surrounding
                 # environment for a free space to go to
                 #print(self.counterfree)
                 #print(self.searching)
-                self.searching = False
+                # self.searching = False
 
 
                 # Start rotating to the available free space. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
-                
+
             elif self.searching:
-                    print('Searching')
+                    print('Path Defined')
 
                     self.path = self.path[1:]
                     loc = round(self.measures.x), round(self.measures.y)
@@ -133,13 +136,13 @@ class MyRob(CRobLinkAngs):
                         self.counterfree=0
                         #self.known.append(self.unknown[0])
                         #self.unknown=self.unknown[1:]
-                        self.searching=False
+                        self.searching = False
                         
                     else:
-
                         x, y = (self.path[1][0] - loc[0]), (self.path[1][1] - loc[1])
                     print('in-> ' + str(loc))
                     #print('X: ' + str(x) + ' Y: ' + str(y))
+                    current = self.corrCompass()
                     #self.onRot = True
                     if x < 0:
                         self.objective = 180
@@ -147,7 +150,6 @@ class MyRob(CRobLinkAngs):
                     elif x > 0:
                         self.objective = 0
                         print('coming through')
-                        
                     elif y < 0:
                         self.objective = -90
                         print('rotating -90')
@@ -157,7 +159,12 @@ class MyRob(CRobLinkAngs):
                     else:
                         print('Test')
                         self.onRot = False
-                    
+                    if self.objective != current:
+                        self.onRot = True
+                    else:
+                        print('Not turn')
+                        self.onRot = False
+                        self.endCycle = False
 
             elif center_sensor > 1.2:
                 self.whosFree()
@@ -174,8 +181,8 @@ class MyRob(CRobLinkAngs):
                 self.counterfree = 0
                 if self.South:
                     self.South = False
-                if self.amknown:
-                    start=round(self.measures.x),round(self.measures.y)
+                if self.amknown and not self.searching:
+                    start = round(self.measures.x), round(self.measures.y)
                     print('started search in-> '+str(start))
                     self.a(start,self.unknown[0])
                     self.path=[items for items in self.path if items[0]%2==0 and items[1]%2==0]
@@ -183,7 +190,7 @@ class MyRob(CRobLinkAngs):
                     print(self.path)
                     self.searching = True
                 else:
-                    self.searching=False
+                    self.searching = False
         else:
             # If you are not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
