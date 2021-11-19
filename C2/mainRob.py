@@ -115,7 +115,7 @@ class MyRob(CRobLinkAngs):
                 # environment for a free space to go to
                 #print(self.counterfree)
                 #print(self.searching)
-                #self.searching = False
+                self.searching = False
 
 
                 # Start rotating to the available free space. Once it is done, this function returns false
