@@ -115,7 +115,7 @@ class MyRob(CRobLinkAngs):
                 # environment for a free space to go to
                 #print(self.counterfree)
                 #print(self.searching)
-                self.searching = False
+                #self.searching = False
 
 
                 # Start rotating to the available free space. Once it is done, this function returns false
@@ -123,20 +123,30 @@ class MyRob(CRobLinkAngs):
             elif self.searching:
                     print('Searching')
 
-                    #self.path = self.path[1:]
-                    print('Path: ' + str(self.path))
+                    self.path = self.path[1:]
                     loc = round(self.measures.x), round(self.measures.y)
-                    x, y = (self.path[1][0] - loc[0]), (self.path[1][1] - loc[1])
+                    print(self.path)
+                    if len(self.path) == 1:
+                        x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
+                        self.path = []
+                        self.counterfree=0
+                        #self.known.append(self.unknown[0])
+                        #self.unknown=self.unknown[1:]
+                        self.searching=False
+                        
+                    else:
+
+                        x, y = (self.path[1][0] - loc[0]), (self.path[1][1] - loc[1])
                     print('in-> ' + str(loc))
                     #print('X: ' + str(x) + ' Y: ' + str(y))
                     self.onRot = True
-                    self.path=self.path[1:]
                     if x < 0:
                         self.objective = 180
                         print('rotating 180')
                     elif x > 0:
                         self.objective = 0
                         print('coming through')
+                        
                     elif y < 0:
                         self.objective = -90
                         print('rotating -90')
@@ -146,26 +156,18 @@ class MyRob(CRobLinkAngs):
                     else:
                         print('Test')
                         self.onRot = False
+                    
 
-
-
-                    if len(self.path) == 1:
-                        self.path = []
-                        self.counterfree=0
-                        #self.known.append(self.unknown[0])
-                        #self.unknown=self.unknown[1:]
-                        self.searching=False
             elif center_sensor > 1.2:
                 self.whosFree()
                 self.onRot = True
             else:
                 # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
                 # restart variables and annotate known and unknown variables
-
+                #print('MAZE-> '+str(self.maze.matrix))
                 self.appendWalked()
                 self.amknown = self.searchKnown()
-                print(self.known)
-                print(self.unknown)
+                #print(self.unknown)
                 self.searchUnknown()
                 self.endCycle = False
                 self.counterfree = 0
@@ -175,10 +177,10 @@ class MyRob(CRobLinkAngs):
                     start=round(self.measures.x),round(self.measures.y)
                     print('started search in-> '+str(start))
 
-                    self.a(start, self.unknown[0])
+                    self.a(start,self.unknown[0])
                     self.path.append(self.unknown[0])
+                    print(self.path)
                     self.searching = True
-                    
                 else:
                     self.searching=False
         else:
@@ -190,6 +192,15 @@ class MyRob(CRobLinkAngs):
         self.writeMap()
 
 
+    def a(self,start,goal):
+
+        neighbours=[(0,1),(0,-1),(1,0),(-1,0)]
+        final_goal=0,0
+        for i,j in neighbours:
+            neigh=goal[0]+i,goal[1]+j
+            if self.maze.matrix[13-neigh[1]][neigh[0]+27]=='X' and neigh[0]%2==0 and neigh[1]%2==0:
+                final_goal=neigh
+        self.path=astar(self.maze.matrix,start,final_goal)
 
     def writeMap(self):
         f=open('mapping.out','w+')
@@ -272,7 +283,7 @@ class MyRob(CRobLinkAngs):
             else:
                 self.obj += 2
 
-            print('Mapping...')
+            #print('Mapping...')
 
             # print(self.path)
             
@@ -454,15 +465,7 @@ class MyRob(CRobLinkAngs):
         elif -100 < current < -80:
             current = -90
 
-        return current
-
-    def a(self,start,goal):
-        neighbours=[(0,1),(0,-1),(1,0),(-1,0)]
-
-        for i,j in neighbours:
-            neigh=goal[0]+i,goal[1]+j
-            if neigh in self.known and neigh[0]%2==0 and neigh[1]%2==0:
-                 self.path=astar(self.known,start,neigh)
+        return current      
 
     def whosFree(self):
         """
