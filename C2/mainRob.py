@@ -32,10 +32,11 @@ class MyRob(CRobLinkAngs):
         self.last_y = 13
         self.unknown = []
         self.known = [(0, 0)]
-        self.path=[]
-        self.searching=False
+        self.path = []
+        self.searching = False
         self.walked = [(0, 0)]
-        self.front = False
+        self.pathfollowing = False
+        self.haspath = False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -126,71 +127,85 @@ class MyRob(CRobLinkAngs):
 
             elif self.searching:
                     print('Path Defined')
-
-                    self.path = self.path[1:]
-                    loc = round(self.measures.x), round(self.measures.y)
-                    print(self.path)
-                    if len(self.path) == 1:
-                        x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
-                        self.path = []
-                        self.counterfree=0
-                        #self.known.append(self.unknown[0])
-                        #self.unknown=self.unknown[1:]
+                    if len(self.path) == 0:
+                        self.haspath = False
                         self.searching = False
-                        
                     else:
-                        x, y = (self.path[1][0] - loc[0]), (self.path[1][1] - loc[1])
-                    print('in-> ' + str(loc))
-                    #print('X: ' + str(x) + ' Y: ' + str(y))
-                    current = self.corrCompass()
-                    #self.onRot = True
-                    if x < 0:
-                        self.objective = 180
-                        print('rotating 180')
-                    elif x > 0:
-                        self.objective = 0
-                        print('coming through')
-                    elif y < 0:
-                        self.objective = -90
-                        print('rotating -90')
-                    elif y > 0:
-                        self.objective = 90
-                        print('rotating 90')
-                    else:
-                        print('Test')
-                        self.onRot = False
-                    if self.objective != current:
-                        self.onRot = True
-                    else:
-                        print('Not turn')
-                        self.onRot = False
-                        self.endCycle = False
+                        loc = round(self.measures.x), round(self.measures.y)
+                        print(self.path)
+                        x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
+                        print('in-> ' + str(loc))
+                        print('X: ' + str(x) + ' Y: ' + str(y))
+                        current = self.corrCompass()
+                        #self.onRot = True
+                        if x < 0:
+                            self.objective = 180
+                            print('direction 180')
+                        elif x > 0:
+                            self.objective = 0
+                            print('direction 0')
+                        elif y < 0:
+                            self.objective = -90
+                            print('direction -90')
+                        elif y > 0:
+                            self.objective = 90
+                            print('direction 90')
+                        else:
+                            print('Test')
+                            self.onRot = False
+                        if self.objective != current:
+                            print('Rotating')
+                            self.onRot = True
+                        else:
+                            print('Not turn')
+                            self.onRot = False
+                            self.searching = False
+                            self.path = self.path[1:]
 
-            elif center_sensor > 1.2:
+
+
+            elif center_sensor > 1.2 and not self.pathfollowing:
+                print('whos free')
                 self.whosFree()
                 self.onRot = True
+
+
             else:
                 # If it doesn't have anything in front nor is in middle of a rotation, start a new cycle,
                 # restart variables and annotate known and unknown variables
                 #print('MAZE-> '+str(self.maze.matrix))
+                print('Else')
                 self.appendWalked()
                 self.amknown = self.searchKnown()
                 #print(self.unknown)
                 self.searchUnknown()
-                self.endCycle = False
-                self.counterfree = 0
+
+                # if len(self.path) == 0:
+                #     print('No Path')
+                #     self.haspath = False
+
                 if self.South:
                     self.South = False
-                if self.amknown and not self.searching:
-                    start = round(self.measures.x), round(self.measures.y)
-                    print('started search in-> '+str(start))
-                    self.a(start,self.unknown[0])
-                    self.path=[items for items in self.path if items[0]%2==0 and items[1]%2==0]
-                    self.path.append(self.unknown[0])
-                    print(self.path)
+                if self.amknown:
                     self.searching = True
-                else:
-                    self.searching = False
+                    if not self.haspath:
+                        start = round(self.measures.x), round(self.measures.y)
+                        print('started search in-> '+str(start))
+                        end = self.unknown[0]
+                        self.a(start, end)
+                        self.path = [items for items in self.path if items[0]%2==0 and items[1]%2==0]
+                        self.path.append((2 * end[0] - self.path[-1][0], 2 * end[1] - self.path[-1][1]))
+                        self.path.remove(start)
+                        print(self.path)
+                        self.pathfollowing = True
+                        self.haspath = True
+                    else:
+                        print('Go')
+                        self.endCycle = False
+
+                if not self.pathfollowing:
+                    self.endCycle = False
+
         else:
             # If you are not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
@@ -209,6 +224,7 @@ class MyRob(CRobLinkAngs):
             if self.maze.matrix[13-neigh[1]][neigh[0]+27]=='X' and neigh[0]%2==0 and neigh[1]%2==0:
                 final_goal=neigh
         self.path=astar(self.maze.matrix,start,final_goal)
+
 
     def writeMap(self):
         f=open('mapping.out','w+')
@@ -290,7 +306,6 @@ class MyRob(CRobLinkAngs):
                 self.obj -= 2
             else:
                 self.obj += 2
-
             #print('Mapping...')
 
             # print(self.path)
