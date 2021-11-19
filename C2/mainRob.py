@@ -120,6 +120,7 @@ class MyRob(CRobLinkAngs):
 
                 # Start rotating to the available free space. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
+                
             elif self.searching:
                     print('Searching')
 
@@ -139,7 +140,7 @@ class MyRob(CRobLinkAngs):
                         x, y = (self.path[1][0] - loc[0]), (self.path[1][1] - loc[1])
                     print('in-> ' + str(loc))
                     #print('X: ' + str(x) + ' Y: ' + str(y))
-                    self.onRot = True
+                    #self.onRot = True
                     if x < 0:
                         self.objective = 180
                         print('rotating 180')
@@ -176,8 +177,8 @@ class MyRob(CRobLinkAngs):
                 if self.amknown:
                     start=round(self.measures.x),round(self.measures.y)
                     print('started search in-> '+str(start))
-
                     self.a(start,self.unknown[0])
+                    self.path=[items for items in self.path if items[0]%2==0 and items[1]%2==0]
                     self.path.append(self.unknown[0])
                     print(self.path)
                     self.searching = True
