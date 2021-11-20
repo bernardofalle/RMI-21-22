@@ -4,8 +4,9 @@ import sys
 from croblink import *
 from math import *
 import xml.etree.ElementTree as ET
-from time import sleep
+from time import time
 from astar import *
+
 
 
 CELLROWS=7
@@ -37,6 +38,7 @@ class MyRob(CRobLinkAngs):
         self.walked = [(0, 0)]
         self.pathfollowing = False
         self.haspath = False
+
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -225,7 +227,16 @@ class MyRob(CRobLinkAngs):
             neigh=goal[0]+i,goal[1]+j
             if self.maze.matrix[13-neigh[1]][neigh[0]+27]=='X' and neigh[0]%2==0 and neigh[1]%2==0:
                 final_goal=neigh
-        self.path=astar(self.maze.matrix,start,final_goal)
+        self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
+        if timeout:
+            self.path, timeout = astar(self.maze.matrix, final_goal, start, time(), 0.5)
+            if not timeout:
+                self.path = list(reversed(self.path))
+            # else:
+            #
+            #     start2 = self.walked[-2]
+            #     path1 = self.a(self.maze.matrix, start, start2, time(), 0.5)
+
 
 
     def writeMap(self):
