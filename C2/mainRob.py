@@ -191,7 +191,9 @@ class MyRob(CRobLinkAngs):
                     if not self.haspath:
                         start = round(self.measures.x), round(self.measures.y)
                         print('started search in-> '+str(start))
-                        end = self.unknown[0]
+                        # end = self.unknown[0]
+                        end = self.findCloser()
+                        print('ended search in-> ' + str(end))
                         self.a(start, end)
                         self.path = [items for items in self.path if items[0]%2==0 and items[1]%2==0]
                         self.path.append((2 * end[0] - self.path[-1][0], 2 * end[1] - self.path[-1][1]))
@@ -592,6 +594,26 @@ class MyRob(CRobLinkAngs):
         else:
             return True
 
+
+    def findCloser(self):
+        # Get GPS values
+        x = round(self.measures.x)
+        y = round(self.measures.y)
+        print(x,y)
+
+        # Defining min distance
+        mindist = 10000
+        minUnknown = self.unknown[0]
+        print('U: ' + str(self.unknown))
+        print('K: ' + str(self.known))
+        for unknown in self.unknown:
+            dist = sqrt((unknown[0] - x) ** 2 + (unknown[1] - y) ** 2)
+            # print('I am ' + str(unknown) + ' and my distance is ' + str(dist))
+            if dist < mindist:
+                mindist = dist
+                minUnknown = unknown
+
+        return minUnknown
 
 
     def converter(self, lin, rot):
