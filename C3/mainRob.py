@@ -38,7 +38,7 @@ class MyRob(CRobLinkAngs):
         self.walked = [(0, 0)]
         self.pathfollowing = False
         self.haspath = False
-        self.beacon_coordinates=[]
+        self.beacon_coordinates=[(0, 0)]
         self.go_to_beacons=False
 
 
@@ -258,6 +258,26 @@ class MyRob(CRobLinkAngs):
             return end
         else:
             print('FULL MAPPING DONE ')
+            final_path = []
+            start = self.beacon_coordinates[0]
+            goal = self.beacon_coordinates[1]
+            self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
+            self.path.append((2 * goal[0] - self.path[-1][0], 2 * goal[1] - self.path[-1][1]))
+            # self.path.remove(start)
+            final_path.append(self.path)
+            start = self.beacon_coordinates[1]
+            goal = self.beacon_coordinates[2]
+            self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
+            self.path.append((2 * goal[0] - self.path[-1][0], 2 * goal[1] - self.path[-1][1]))
+            self.path.remove(start)
+            final_path.append(self.path)
+            start = self.beacon_coordinates[2]
+            goal = self.beacon_coordinates[0]
+            self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
+            final_path.append(self.path)
+            self.path.append((2 * goal[0] - self.path[-1][0], 2 * goal[1] - self.path[-1][1]))
+            self.path.remove(start)
+            print(final_path)
             sys.exit()
         #print(self.path)
         #print(end)
@@ -354,8 +374,8 @@ class MyRob(CRobLinkAngs):
             if self.measures.ground==1 or self.measures.ground==2:
                 if (round(self.measures.x),round(self.measures.y)) not in self.beacon_coordinates:
                     self.beacon_coordinates.append((round(self.measures.x),round(self.measures.y)))
-                    if len(self.beacon_coordinates)==2:
-                        self.go_to_beacons=True
+                    # if len(self.beacon_coordinates)==2:
+                    #     self.go_to_beacons=True
             # print(self.path)
             
             #if start in self.known and self.searching is False:

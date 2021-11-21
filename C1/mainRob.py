@@ -100,7 +100,6 @@ class MyRob(CRobLinkAngs):
             print('Not enough members of the list')
 
         if right_dir:
-
             if center_sensor < 5.0 and center_sensor > 0.5:
                 lin = 0.15 / center_sensor
                 if left_sensor > 2.17 and right_sensor < 2.17:
