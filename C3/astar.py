@@ -94,8 +94,8 @@ def astar(maze, start, end, start_time, timeout):
                 continue
 
             # Create the f, g, and h values
-            child.g = abs(child.position[0] - start_node.position[0]) + abs(child.position[1] - start_node.position[1])
-            child.h = abs(child.position[0] - end_node.position[0]) + abs(child.position[1] - end_node.position[1])
+            child.g = (child.position[0] - start_node.position[0])**2 + (child.position[1] - start_node.position[1])**2
+            child.h = (child.position[0] - end_node.position[0])**2 + (child.position[1] - end_node.position[1])**2
             child.f = child.g + child.h
 
             # Child is already in the open list
@@ -108,9 +108,9 @@ def astar(maze, start, end, start_time, timeout):
             open_list.append(child)
 
         # Time out function
-        if time() - start_time > timeout:
-            #print('Code timed out after ' + str(timeout) + ' seconds')
-            return [], True
+        #if time() - start_time > timeout:
+        #    #print('Code timed out after ' + str(timeout) + ' seconds')
+        #    return [], True
 
 
 
