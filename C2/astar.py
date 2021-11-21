@@ -79,7 +79,6 @@ def astar(maze, start, end, start_time, timeout):
             if maze[i[1]-node_position[1]][node_position[0]+i[0]] != 'X':
                     continue
 
-            # print('pos->'+str(node_position))
 
             # Create new node
             new_node = Node(current_node, node_position)
