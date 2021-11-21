@@ -228,7 +228,6 @@ class MyRob(CRobLinkAngs):
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
         #print(self.known)
         #print(self.unknown)
-        self.maze.matrix[13][27]='I'
         self.writeMap()
 
     def a(self, start, goal_list):
@@ -276,10 +275,12 @@ class MyRob(CRobLinkAngs):
             self.path.append((2 * goal[0] - self.path[-1][0], 2 * goal[1] - self.path[-1][1]))
             self.path.remove(start)
             print(final_path)
+            self.maze.matrix[13][27] = '0'
+            self.maze.matrix[13-self.beacon_coordinates[1][1]][27+self.beacon_coordinates[1][0]] = '1'
+            self.maze.matrix[13-self.beacon_coordinates[2][1]][27+self.beacon_coordinates[2][0]] = '2'
+            self.writeMap()
             sys.exit()
-        #print(self.path)
-        #print(end)
-        return None
+
 
 
 
