@@ -191,10 +191,10 @@ class MyRob(CRobLinkAngs):
                 if self.go_to_beacons:
                     print('got beacon coordinates')
                     self.searching=True
-                    print(self.beacon_coordinates)
+                    print(self.beacon_coordinates[::1])
                     if not self.haspath:
                         start = round(self.measures.x), round(self.measures.y)
-                        self.a(start,self.beacon_coordinates)
+                        self.a(start,self.beacon_coordinates[::1])
                         self.path = [items for items in self.path if items[0]%2==0 and items[1]%2==0]
                         self.pathfollowing = True
                         self.haspath = True
