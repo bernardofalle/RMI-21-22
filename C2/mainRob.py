@@ -232,13 +232,13 @@ class MyRob(CRobLinkAngs):
                 neigh=goal[0]+i,goal[1]+j
                 if self.maze.matrix[13-neigh[1]][neigh[0]+27]=='X' and neigh[0]%2==0 and neigh[1]%2==0:
                     final_goal=neigh
-            self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
-            length = len(self.path)
-            #print('Coords: ' + str(goal) + '; Len: ' + str(length) + ';\n Path: ' + str(self.path))
-            if length < min_len:
-                min_idx = idx
-                min_len = length
-                min_path = self.path
+                    self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
+                    length = len(self.path)
+                #print('Coords: ' + str(goal) + '; Len: ' + str(length) + ';\n Path: ' + str(self.path))
+                    if length < min_len:
+                        min_idx = idx
+                        min_len = length
+                        min_path = self.path
 
         self.path = min_path
         if goal_list:
@@ -249,7 +249,7 @@ class MyRob(CRobLinkAngs):
             sys.exit()
         #print(self.path)
         #print(end)
-        return None
+
 
 
 
