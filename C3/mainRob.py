@@ -40,7 +40,6 @@ class MyRob(CRobLinkAngs):
         self.haspath = False
         self.beacon_coordinates=[(0, 0)]
         self.go_to_beacons=False
-        self.final_path=[]
 
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
@@ -227,27 +226,29 @@ class MyRob(CRobLinkAngs):
         else:
             # If you are not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
+        #print(self.known)
+        #print(self.unknown)
+        self.maze.matrix[13][27]='I'
+        self.writeMap()
 
-
-    def a(self,start,goal_list):
-        #print('U: ' + str(goal_list))
+    def a(self, start, goal_list):
+        # print('U: ' + str(goal_list))
         min_len = 10000
         min_idx = -1
         min_path = []
         for idx, goal in enumerate(goal_list):
-            neighbours=[(0,1),(0,-1),(1,0),(-1,0)]
-            final_goal=0,0
-            for i,j in neighbours:
-                neigh=goal[0]+i,goal[1]+j
-                if self.maze.matrix[13-neigh[1]][neigh[0]+27]=='X' and neigh[0]%2==0 and neigh[1]%2==0:
-                    final_goal=neigh
-            self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
-            length = len(self.path)
-            #print('Coords: ' + str(goal) + '; Len: ' + str(length) + ';\n Path: ' + str(self.path))
-            if length < min_len:
-                min_idx = idx
-                min_len = length
-                min_path = self.path
+            neighbours = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+            final_goal = 0, 0
+            for i, j in neighbours:
+                neigh = goal[0] + i, goal[1] + j
+                if self.maze.matrix[13 - neigh[1]][neigh[0] + 27] == 'X' and neigh[0] % 2 == 0 and neigh[1] % 2 == 0:
+                    final_goal = neigh
+                    self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
+                    length = len(self.path)
+                    if length < min_len:
+                        min_idx = idx
+                        min_len = length
+                        min_path = self.path
 
         self.path = min_path
         if goal_list:
@@ -255,41 +256,41 @@ class MyRob(CRobLinkAngs):
             return end
         else:
             print('FULL MAPPING DONE ')
-            self.final_path = []
+            final_path = []
             start = self.beacon_coordinates[0]
             goal = self.beacon_coordinates[1]
-            self.path , timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
-            
-            self.final_path.extend(self.path)
+            self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
+            self.path.append((2 * goal[0] - self.path[-1][0], 2 * goal[1] - self.path[-1][1]))
+            # self.path.remove(start)
+            final_path.append(self.path)
             start = self.beacon_coordinates[1]
             goal = self.beacon_coordinates[2]
             self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
-        
+            self.path.append((2 * goal[0] - self.path[-1][0], 2 * goal[1] - self.path[-1][1]))
             self.path.remove(start)
-            self.final_path.extend(self.path)
+            final_path.append(self.path)
             start = self.beacon_coordinates[2]
             goal = self.beacon_coordinates[0]
-
-      
             self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
-       
+            final_path.append(self.path)
+            self.path.append((2 * goal[0] - self.path[-1][0], 2 * goal[1] - self.path[-1][1]))
             self.path.remove(start)
-            self.final_path.extend(self.path)
-            self.final_path=[i for i in self.final_path if i[0]%2==0 and i[1]%2==0]
-            self.writeMap()
-            print(self.final_path)
+            print(final_path)
             sys.exit()
+        #print(self.path)
+        #print(end)
         return None
 
+
+
+
+
     def writeMap(self):
-        i=1
-        f=open('pathC3.out','w+')
-        for x,y in self.final_path:
-            f.write(str(x)+' '+str(y)+' ')
-            if (x,y) in self.beacon_coordinates and (x,y) != (0,0):
-                f.write('#'+str(i))
-                i+=1
-            f.write('\n')
+        f=open('mapping.out','w+')
+        for line in self.maze.matrix:
+            for element in line:
+                f.write(element)
+            f.write('\n')    
         f.close()
 
     def moveFront(self, Kp, Kd, Ki):
