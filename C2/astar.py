@@ -43,7 +43,7 @@ def astar(maze, start, end, start_time, timeout):
 
     # Loop until you find the end
     while len(open_list) > 0:
-        print(str(closed_list))
+        # print(str(closed_list))
         # Sort
         open_list.sort()
         # Get the current node
@@ -54,7 +54,7 @@ def astar(maze, start, end, start_time, timeout):
         open_list.pop(current_index)
         closed_list.append(current_node)
 
-        print('Current Node: ' + str(current_node))
+        # print('Current Node: ' + str(current_node))
 
         # Found the goal
         if current_node == end_node:
@@ -71,10 +71,11 @@ def astar(maze, start, end, start_time, timeout):
 
             # Get node position
             node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-            print('pos->'+str(node_position))
+            # print('pos->'+str(node_position))
             # Make sure within range
             if node_position[1]+i[1] > (len(maze) - 1) or node_position[1]+i[1] < 0 or node_position[0]+i[0] > (len(maze[len(maze)-1])-1) or node_position[0]+i[0] < 0:
                 continue
+            print('pos->'+str(node_position))
 
             # Make sure walkable terrain
             if maze[i[1]-node_position[1]][node_position[0]+i[0]] != 'X':

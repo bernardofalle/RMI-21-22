@@ -179,6 +179,7 @@ class MyRob(CRobLinkAngs):
                 print('Else')
                 self.appendWalked()
                 self.amknown = self.searchKnown()
+                print('K: ' + str(self.known))
                 #print(self.unknown)
                 self.searchUnknown()
 
@@ -193,10 +194,10 @@ class MyRob(CRobLinkAngs):
                     if not self.haspath:
                         start = round(self.measures.x), round(self.measures.y)
                         print('started search in-> '+str(start))
-                        # end = self.unknown[0]
-                        end = self.findCloser()
-                        print('ended search in-> ' + str(end))
-                        self.a(start, end)
+                        end_list = self.unknown
+                        # end = self.findCloser()
+                        # print('ended search in-> ' + str(end))
+                        end = self.a(start, end_list)
                         self.path = [items for items in self.path if items[0]%2==0 and items[1]%2==0]
                         self.path.append((2 * end[0] - self.path[-1][0], 2 * end[1] - self.path[-1][1]))
                         self.path.remove(start)
@@ -219,23 +220,33 @@ class MyRob(CRobLinkAngs):
         self.writeMap()
 
 
-    def a(self,start,goal):
+    def a(self,start,goal_list):
+        print('U: ' + str(goal_list))
+        min_len = 10000
+        min_idx = -1
+        min_path = []
+        for idx, goal in enumerate(goal_list):
+            neighbours=[(0,1),(0,-1),(1,0),(-1,0)]
+            final_goal=0,0
+            for i,j in neighbours:
+                neigh=goal[0]+i,goal[1]+j
+                if self.maze.matrix[13-neigh[1]][neigh[0]+27]=='X' and neigh[0]%2==0 and neigh[1]%2==0:
+                    final_goal=neigh
+            self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
+            length = len(self.path)
+            print('Coords: ' + str(goal) + '; Len: ' + str(length) + ';\n Path: ' + str(self.path))
+            if length < min_len:
+                min_idx = idx
+                min_len = length
+                min_path = self.path
 
-        neighbours=[(0,1),(0,-1),(1,0),(-1,0)]
-        final_goal=0,0
-        for i,j in neighbours:
-            neigh=goal[0]+i,goal[1]+j
-            if self.maze.matrix[13-neigh[1]][neigh[0]+27]=='X' and neigh[0]%2==0 and neigh[1]%2==0:
-                final_goal=neigh
-        self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
-        if timeout:
-            self.path, timeout = astar(self.maze.matrix, final_goal, start, time(), 0.5)
-            if not timeout:
-                self.path = list(reversed(self.path))
-            # else:
-            #
-            #     start2 = self.walked[-2]
-            #     path1 = self.a(self.maze.matrix, start, start2, time(), 0.5)
+        self.path = min_path
+        end = goal_list[min_idx]
+        print(self.path)
+        print(end)
+        return end
+
+
 
 
 
@@ -290,6 +301,8 @@ class MyRob(CRobLinkAngs):
                 self.integral = 0
                 self.minus = True
             err = -self.obj + self.measures.y
+        else:
+            err = 0
 
         # Calculates the velocity based on the PID
         if self.lin != 0:
