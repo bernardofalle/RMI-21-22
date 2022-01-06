@@ -6,11 +6,12 @@ from math import *
 import xml.etree.ElementTree as ET
 from math import inf
 from astar import *
+import logging
+import numpy as np
 
+CELLROWS = 7
+CELLCOLS = 14
 
-
-CELLROWS=7
-CELLCOLS=14
 
 class MyRob(CRobLinkAngs):
     def __init__(self, rob_name, rob_id, angles, host):
@@ -28,7 +29,7 @@ class MyRob(CRobLinkAngs):
         self.onRot = False
         self.minus = False
         self.South = False
-        self.maze=Lab()
+        self.maze = Lab()
         self.last_x = 27
         self.last_y = 13
         self.unknown = []
@@ -38,11 +39,12 @@ class MyRob(CRobLinkAngs):
         self.walked = [(0, 0)]
         self.pathfollowing = False
         self.haspath = False
-        self.beacon_coordinates=[(0, 0)]
-        self.go_to_beacons=False
-        self.f=None
-        self.final_path=[]
-
+        self.beacon_coordinates = [(0, 0)]
+        self.go_to_beacons = False
+        self.f = None
+        self.final_path = []
+        self.estimated_velocity = [(0, 0)]
+        self.pose = [(0, 0)]
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -76,37 +78,44 @@ class MyRob(CRobLinkAngs):
                 state = 'stop'
 
             if state == 'run':
-                if self.measures.visitingLed==True:
-                    state='wait'
-                if self.measures.ground==0:
+                if self.measures.visitingLed == True:
+                    state = 'wait'
+                if self.measures.ground == 0:
                     self.setVisitingLed(True)
                 self.wander()
-            elif state=='wait':
+            elif state == 'wait':
                 self.setReturningLed(True)
-                if self.measures.visitingLed==True:
+                if self.measures.visitingLed == True:
                     self.setVisitingLed(False)
-                if self.measures.returningLed==True:
-                    state='return'
-                self.driveMotors(0.0,0.0)
-            elif state=='return':
-                if self.measures.visitingLed==True:
+                if self.measures.returningLed == True:
+                    state = 'return'
+                self.driveMotors(0.0, 0.0)
+            elif state == 'return':
+                if self.measures.visitingLed == True:
                     self.setVisitingLed(False)
-                if self.measures.returningLed==True:
+                if self.measures.returningLed == True:
                     self.setReturningLed(False)
                 self.wander()
-            
 
     def wander(self):
         """
         The main function of the program. Call every other function and chooses between them.
         :return:
         """
-        center_id = 0
-
-        center_sensor = self.measures.irSensor[center_id]
-
-        # Offset the gps, making the coordinates relative to the starting point
+        # TODO Remove this on delivery
+        # Remove absolute gps coordinates
         self.gpsConverter()
+        self.real_x = self.measures.x
+        self.real_y = self.measures.y
+        self.measures.x = self.pose[-1][0]
+        self.measures.y = self.pose[-1][1]
+        logging.debug(f'The real GPS values are (X,Y): ({round(self.real_x, 3)},{round(self.real_y, 3)})')
+        logging.debug(f'The calculates GPS values are: ({round(self.measures.x, 3)},{round(self.measures.y, 3)})')
+        logging.debug(f'The difference between values is ({round(self.measures.x - self.real_x, 3)},'
+                      f'{round(self.measures.y - self.real_y, 3)})')
+
+        center_id = 0
+        center_sensor = self.measures.irSensor[center_id]
 
         # Check if the compass is facing south
         self.checkChangeCompass()
@@ -215,7 +224,6 @@ class MyRob(CRobLinkAngs):
             # If it is not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
 
-
     def a(self, start, goal_list):
         """
                 The start of an a start algorithm, performing the needed operations before the algorithm is started
@@ -276,13 +284,12 @@ class MyRob(CRobLinkAngs):
             goal = self.beacon_coordinates[0]
             self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
             self.path.remove(start)
-            self.final_path.extend(self.path)  
-            self.final_path=[i for i in self.final_path if i[0]%2==0 and i[1]%2==0]
+            self.final_path.extend(self.path)
+            self.final_path = [i for i in self.final_path if i[0] % 2 == 0 and i[1] % 2 == 0]
             print(self.final_path)
-            
+
             self.writePath()
             sys.exit()
-
 
     def writePath(self):
         """
@@ -294,11 +301,11 @@ class MyRob(CRobLinkAngs):
         f = open(self.f + '.path', 'w+')
         # For every tuple in the list, writes it to the file
         for x, y in self.final_path:
-            f.write(str(x)+' '+str(y)+' ')
+            f.write(str(x) + ' ' + str(y) + ' ')
 
             # If the tuple is a beacon, annotate it
             if (x, y) in self.beacon_coordinates and (x, y) != (0, 0):
-                f.write('#'+str(i))
+                f.write('#' + str(i))
                 i += 1
             f.write('\n')
         f.close()
@@ -376,9 +383,9 @@ class MyRob(CRobLinkAngs):
         if -0.11 < self.length < 0.11:
 
             # Check if it is in a beacon, and if so, annotates it
-            if self.measures.ground==1 or self.measures.ground==2:
-                if (round(self.measures.x),round(self.measures.y)) not in self.beacon_coordinates:
-                    self.beacon_coordinates.append((round(self.measures.x),round(self.measures.y)))
+            if self.measures.ground == 1 or self.measures.ground == 2:
+                if (round(self.measures.x), round(self.measures.y)) not in self.beacon_coordinates:
+                    self.beacon_coordinates.append((round(self.measures.x), round(self.measures.y)))
 
             # Defines a new objective
             if self.minus:
@@ -416,7 +423,7 @@ class MyRob(CRobLinkAngs):
             return True
         return False
 
-    def walls(self,compass,x,y):
+    def walls(self, compass, x, y):
         """
                 From the GPS location, the compass orientation and the values of the proximity sensore, determine where are
                 walls and maps them.
@@ -540,7 +547,6 @@ class MyRob(CRobLinkAngs):
             elif self.measures.irSensor[0] >= 1.5:
                 print('wall in front')
                 self.maze.matrix[y + 1][x] = '-'
-
 
     def rotate(self, Kp, Kd, Ki, obj, retrot):
         """
@@ -705,6 +711,32 @@ class MyRob(CRobLinkAngs):
         else:
             return True
 
+    def velEstimator(self, left_motor, right_motor):
+        """
+        Estimates the real velocity from the commands given
+        """
+        left_out = (left_motor + self.estimated_velocity[-1][0]) / 2
+        right_out = (right_motor + self.estimated_velocity[-1][1]) / 2
+        self.estimated_velocity.append((left_out, right_out))
+        self.kinematics()
+
+    def kinematics(self):
+        """
+        From each wheel velocity, calculate the velocity in the global coordinate frame
+        """
+        wheel_velocity = np.transpose(np.asarray(self.estimated_velocity[-1]))
+        velocity_matrix = np.asarray([[1 / 2, 1 / 2], [-1 / 2, 1 / 2]])
+        global_velocity_matrix = np.asarray([[math.cos(math.radians(self.measures.compass)), 0],
+                                             [math.sin(math.radians(self.measures.compass)), 0],
+                                             [0, 1]])
+        velocity = np.matmul(velocity_matrix, wheel_velocity)
+        global_velocity = np.matmul(global_velocity_matrix, velocity)
+        print(self.measures.compass)
+        current_velocity = (global_velocity[0], global_velocity[1])
+        last_pose = self.pose[-1]
+        current_pose = (last_pose[0] + current_velocity[0], last_pose[1] + current_velocity[1])
+        self.pose.append(current_pose)
+
     def converter(self, lin, rot):
         """
         Converts the value of linear and angular velocity in motor rotation
@@ -714,51 +746,59 @@ class MyRob(CRobLinkAngs):
         """
         left_motor = lin - rot / 2
         right_motor = lin + rot / 2
+        if left_motor > 0.15:
+            left_motor = 0.15
+        if right_motor > 0.15:
+            right_motor = 0.15
+        logging.debug(f'The velocity command given to the motors is ({round(left_motor, 3)},{round(right_motor, 3)})')
+        self.velEstimator(left_motor, right_motor)
         self.driveMotors(left_motor, right_motor)
+
 
 class Lab():
     def __init__(self):
-        self.matrix=[[' ']*55]
+        self.matrix = [[' '] * 55]
 
         for m in range(26):
-            self.matrix.insert(0,[' ']*55)
-        self.matrix[13][27]='I'
-    
+            self.matrix.insert(0, [' '] * 55)
+        self.matrix[13][27] = 'I'
+
+
 class Map():
     def __init__(self, filename):
         tree = ET.parse(filename)
         root = tree.getroot()
-        
-        self.labMap = [[' '] * (CELLCOLS*2-1) for i in range(CELLROWS*2-1) ]
-        i=1
+
+        self.labMap = [[' '] * (CELLCOLS * 2 - 1) for i in range(CELLROWS * 2 - 1)]
+        i = 1
         for child in root.iter('Row'):
-           line=child.attrib['Pattern']
-           row =int(child.attrib['Pos'])
-           if row % 2 == 0:  # this line defines vertical lines
-               for c in range(len(line)):
-                   if (c+1) % 3 == 0:
-                       if line[c] == '|':
-                           self.labMap[row][(c+1)//3*2-1]='|'
-                       else:
-                           None
-           else:  # this line defines horizontal lines
-               for c in range(len(line)):
-                   if c % 3 == 0:
-                       if line[c] == '-':
-                           self.labMap[row][c//3*2]='-'
-                       else:
-                           None
-               
-           i=i+1
+            line = child.attrib['Pattern']
+            row = int(child.attrib['Pos'])
+            if row % 2 == 0:  # this line defines vertical lines
+                for c in range(len(line)):
+                    if (c + 1) % 3 == 0:
+                        if line[c] == '|':
+                            self.labMap[row][(c + 1) // 3 * 2 - 1] = '|'
+                        else:
+                            None
+            else:  # this line defines horizontal lines
+                for c in range(len(line)):
+                    if c % 3 == 0:
+                        if line[c] == '-':
+                            self.labMap[row][c // 3 * 2] = '-'
+                        else:
+                            None
+
+            i = i + 1
 
 
 rob_name = "veryimportantrobot"
 host = "localhost"
 pos = 1
 mapc = None
-f='pathC3.out'
+f = 'pathC3.out'
 
-for i in range(1, len(sys.argv),2):
+for i in range(1, len(sys.argv), 2):
     if (sys.argv[i] == "--host" or sys.argv[i] == "-h") and i != len(sys.argv) - 1:
         host = sys.argv[i + 1]
     elif (sys.argv[i] == "--pos" or sys.argv[i] == "-p") and i != len(sys.argv) - 1:
@@ -774,10 +814,12 @@ for i in range(1, len(sys.argv),2):
         quit()
 
 if __name__ == '__main__':
+    logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s',
+                        level=logging.DEBUG)
     rob = MyRob(rob_name, pos, [0.0, 90.0, -90.0, 180.0], host)
     rob.f = f
     if mapc != None:
         rob.setMap(mapc.labMap)
         rob.printMap()
-    
+
     rob.run()
