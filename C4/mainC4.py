@@ -736,6 +736,65 @@ class MyRob(CRobLinkAngs):
         last_pose = self.pose[-1]
         current_pose = (last_pose[0] + current_velocity[0], last_pose[1] + current_velocity[1])
         self.pose.append(current_pose)
+    
+    def distance(self, x):
+        return 1 / x
+    
+    def corrector(self):
+        last_pose = self.pose[-1]
+        center = self.measures.irSensor[0]
+        left = self.measures.irSensor[1]
+        right = self.measures.irSensor[2]
+        back = self.measures.irSensor[3]
+        wall = 0,0
+        robot_radius = 0.5 #0.5 diameter
+
+        if self.corrCompass() == 0 :
+            if center >= 1.2 :
+                wall = last_pose[0] + 1, last_pose[1]
+                current_pose = (wall[0] - self.distance(center) - robot_radius, last_pose[1])
+            elif left >= 1.2 :
+                wall = last_pose[0], last_pose[1] + 1
+                current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
+            elif right >= 1.2 :
+                wall = last_pose[0], last_pose[1] - 1
+                current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
+
+        elif self.corrCompass() == 90 :
+            if center >= 1.2 :
+                wall = last_pose[0], last_pose[1] + 1
+                current_pose = (last_pose[0], wall[1] - self.distance(center) - robot_radius)
+            elif left >= 1.2 :
+                wall = last_pose[0] -  1, last_pose[1]
+                current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
+            elif right >= 1.2 :
+                wall = last_pose[0] + 1, last_pose[1]
+                current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
+        
+        elif self.corrCompass() == 180 :
+            if center >= 1.2 :
+                wall = last_pose[0] - 1, last_pose[1]
+                current_pose = (wall[0] + self.distance(center) + robot_radius, last_pose[1])
+            elif left >= 1.2 :
+                wall = last_pose[0], last_pose[1] - 1
+                current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
+            elif right >= 1.2 :
+                wall = last_pose[0], last_pose[1] + 1
+                current_pose = (last_pose[0], wall[1] - self.distance(right) - robot_radius)
+        
+        elif self.corrCompass() == -90 :
+            if center >= 1.2 :
+                wall = last_pose[0], last_pose[1] - 1
+                current_pose = (last_pose[0], wall[1] + self.distance(center) + robot_radius)
+            elif left >= 1.2 :
+                wall = last_pose[0] +  1, last_pose[1]
+                current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
+            elif right >= 1.2 :
+                wall = last_pose[0] - 1, last_pose[1]
+                current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
+        
+        if current_pose:
+            self.pose.append(current_pose)
 
     def converter(self, lin, rot):
         """
