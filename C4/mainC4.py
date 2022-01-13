@@ -271,10 +271,12 @@ class MyRob(CRobLinkAngs):
         else:
             # After mapping the whole map, calculate the paths between beacons and prints the path
             #print('FULL MAPPING DONE ')
+            self.beacon_coordinates.remove((0,0))
             perms = list(itertools.permutations(self.beacon_coordinates))
             path = []
 
             for perm in perms:
+                perm.insert(0, (0,0))
                 for i in range(0, len(perm)):
                     if i + 1 == len(perm):
                         p, timeout = astar(self.maze.matrix, perm[i], perm[0], time(), 0.5)
@@ -288,6 +290,7 @@ class MyRob(CRobLinkAngs):
                     self.final_path = path
                 elif len(path) <= len(self.final_path) :
                     self.final_path = path
+                path = []
             
             self.final_path = [i for i in self.final_path if i[0] % 2 == 0 and i[1] % 2 == 0]
 
