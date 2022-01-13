@@ -8,6 +8,7 @@ from math import inf
 from astar import *
 import logging
 import numpy as np
+import itertools
 
 CELLROWS = 7
 CELLCOLS = 14
@@ -269,27 +270,47 @@ class MyRob(CRobLinkAngs):
             return end
         else:
             # After mapping the whole map, calculate the paths between beacons and prints the path
-            print('FULL MAPPING DONE ')
-            start = self.beacon_coordinates[0]
-            goal = self.beacon_coordinates[1]
-            self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
-            # self.path.remove(start)
-            self.final_path.extend(self.path)
-            start = self.beacon_coordinates[1]
-            goal = self.beacon_coordinates[2]
-            self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
-            self.path.remove(start)
-            self.final_path.extend(self.path)
-            start = self.beacon_coordinates[2]
-            goal = self.beacon_coordinates[0]
-            self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
-            self.path.remove(start)
-            self.final_path.extend(self.path)
+            #print('FULL MAPPING DONE ')
+            perms = list(itertools.permutations(self.beacon_coordinates))
+            path = []
+
+            for perm in perms:
+                for i in range(0, len(perm)):
+                    if i + 1 == len(perm):
+                        p, timeout = astar(self.maze.matrix, perm[i], perm[0], time(), 0.5)
+                        path.extend(p)
+                    else:
+                        p, timeout = astar(self.maze.matrix, perm[i], perm[i + 1], time(), 0.5)
+                        path.extend(p)
+                        path.remove(path[-1])
+                
+                if len(self.final_path == 0) :
+                    self.final_path = path
+                elif len(path) <= len(self.final_path) :
+                    self.final_path = path
+            
             self.final_path = [i for i in self.final_path if i[0] % 2 == 0 and i[1] % 2 == 0]
-            print(self.final_path)
+
+            #start = self.beacon_coordinates[0]
+            #goal = self.beacon_coordinates[1]
+            #self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
+            # self.path.remove(start)
+            #self.final_path.extend(self.path)
+            #start = self.beacon_coordinates[1]
+            #goal = self.beacon_coordinates[2]
+            #self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
+            #self.path.remove(start)
+            #self.final_path.extend(self.path)
+            #start = self.beacon_coordinates[2]
+            #goal = self.beacon_coordinates[0]
+            #self.path, timeout = astar(self.maze.matrix, start, goal, time(), 0.5)
+            #self.path.remove(start)
+            #self.final_path.extend(self.path)
+            #self.final_path = [i for i in self.final_path if i[0] % 2 == 0 and i[1] % 2 == 0]
+            #print(self.final_path)
 
             self.writePath()
-            sys.exit()
+            #sys.exit()
 
     def writePath(self):
         """
