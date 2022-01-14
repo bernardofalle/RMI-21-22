@@ -46,6 +46,7 @@ class MyRob(CRobLinkAngs):
         self.final_path = []
         self.estimated_velocity = [(0, 0)]
         self.pose = [(0, 0)]
+        self.WallClose = False
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
@@ -110,11 +111,14 @@ class MyRob(CRobLinkAngs):
         self.real_y = self.measures.y
         self.measures.x = self.pose[-1][0]
         self.measures.y = self.pose[-1][1]
+        threshold_warn = 0.3
+        difference_x = round(self.measures.x - self.real_x, 3)
+        difference_y = round(self.measures.y - self.real_y, 3)
         logging.debug(f'The real GPS values are (X,Y): ({round(self.real_x, 3)},{round(self.real_y, 3)})')
         logging.debug(f'The calculates GPS values are: ({round(self.measures.x, 3)},{round(self.measures.y, 3)})')
-        logging.debug(f'The difference between values is ({round(self.measures.x - self.real_x, 3)},'
-                      f'{round(self.measures.y - self.real_y, 3)})')
-
+        logging.debug(f'The difference between values is ({difference_x},{difference_y})')
+        if difference_y >= threshold_warn or difference_x >= threshold_warn:
+            logging.warning('A lot or error experienced')
         center_id = 0
         center_sensor = self.measures.irSensor[center_id]
 
@@ -643,7 +647,6 @@ class MyRob(CRobLinkAngs):
             self.objective = current - 90
         elif self.measures.irSensor[3] < 1:
             self.objective = current + 180
-            print(self.objective)
         else:
             print('''I'm lost, please help me''')
 
@@ -755,17 +758,21 @@ class MyRob(CRobLinkAngs):
                                              [0, 1]])
         velocity = np.matmul(velocity_matrix, wheel_velocity)
         global_velocity = np.matmul(global_velocity_matrix, velocity)
-        print(self.measures.compass)
         current_velocity = (global_velocity[0], global_velocity[1])
         last_pose = self.pose[-1]
         current_pose = (last_pose[0] + current_velocity[0], last_pose[1] + current_velocity[1])
-        self.pose.append(current_pose)
+        corrected_pose = self.corrector(current_pose)
+        if corrected_pose:
+            self.pose.append(corrected_pose)
+        else:
+            self.pose.append(current_pose)
     
     def distance(self, x):
         return 1 / x
     
-    def corrector(self):
-        last_pose = self.pose[-1]
+    def corrector(self, last_pose):
+        current_pose = None
+        # last_pose = self.pose[-1]
         center = self.measures.irSensor[0]
         left = self.measures.irSensor[1]
         right = self.measures.irSensor[2]
@@ -773,52 +780,57 @@ class MyRob(CRobLinkAngs):
         wall = 0,0
         robot_radius = 0.5 #0.5 diameter
 
-        if self.corrCompass() == 0 :
-            if center >= 1.2 :
-                wall = last_pose[0] + 1, last_pose[1]
+        if self.corrCompass() == 0:
+            if center >= 1.2:
+                wall = self.round_even(last_pose[0]) + 0.8, last_pose[1]
                 current_pose = (wall[0] - self.distance(center) - robot_radius, last_pose[1])
-            elif left >= 1.2 :
-                wall = last_pose[0], last_pose[1] + 1
-                current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
-            elif right >= 1.2 :
-                wall = last_pose[0], last_pose[1] - 1
-                current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
+            # elif left >= 1.2 :
+            #     wall = last_pose[0], last_pose[1] + 1
+            #     current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
+            # elif right >= 1.2 :
+            #     wall = last_pose[0], last_pose[1] - 1
+            #     current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
 
-        elif self.corrCompass() == 90 :
-            if center >= 1.2 :
-                wall = last_pose[0], last_pose[1] + 1
+        elif self.corrCompass() == 90:
+            if center >= 1.2:
+                wall = last_pose[0], self.round_even(last_pose[1]) + 0.8
                 current_pose = (last_pose[0], wall[1] - self.distance(center) - robot_radius)
-            elif left >= 1.2 :
-                wall = last_pose[0] -  1, last_pose[1]
-                current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
-            elif right >= 1.2 :
-                wall = last_pose[0] + 1, last_pose[1]
-                current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
+            # elif left >= 1.2 :
+            #     wall = last_pose[0] -  1, last_pose[1]
+            #     current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
+            # elif right >= 1.2 :
+            #     wall = last_pose[0] + 1, last_pose[1]
+            #     current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
         
-        elif self.corrCompass() == 180 :
-            if center >= 1.2 :
-                wall = last_pose[0] - 1, last_pose[1]
+        elif self.corrCompass() == 180:
+            if center >= 1.2:
+                wall = self.round_even(last_pose[0]) - 0.8, last_pose[1]
                 current_pose = (wall[0] + self.distance(center) + robot_radius, last_pose[1])
-            elif left >= 1.2 :
-                wall = last_pose[0], last_pose[1] - 1
-                current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
-            elif right >= 1.2 :
-                wall = last_pose[0], last_pose[1] + 1
-                current_pose = (last_pose[0], wall[1] - self.distance(right) - robot_radius)
+            # elif left >= 1.2 :
+            #     wall = last_pose[0], last_pose[1] - 1
+            #     current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
+            # elif right >= 1.2 :
+            #     wall = last_pose[0], last_pose[1] + 1
+            #     current_pose = (last_pose[0], wall[1] - self.distance(right) - robot_radius)
         
-        elif self.corrCompass() == -90 :
-            if center >= 1.2 :
-                wall = last_pose[0], last_pose[1] - 1
+        elif self.corrCompass() == -90:
+            if center >= 1.2:
+                wall = last_pose[0], self.round_even(last_pose[1]) - 0.8
                 current_pose = (last_pose[0], wall[1] + self.distance(center) + robot_radius)
-            elif left >= 1.2 :
-                wall = last_pose[0] +  1, last_pose[1]
-                current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
-            elif right >= 1.2 :
-                wall = last_pose[0] - 1, last_pose[1]
-                current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
+            # elif left >= 1.2 :
+            #     wall = last_pose[0] +  1, last_pose[1]
+            #     current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
+            # elif right >= 1.2 :
+            #     wall = last_pose[0] - 1, last_pose[1]
+            #     current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
         
         if current_pose:
-            self.pose.append(current_pose)
+            print(f'Wall Close, I believe I am at {current_pose}')
+            print(f'Wall Close, I believe I was at {last_pose}')
+            return current_pose
+
+    def round_even(self, number):
+        return round(number/2)*2
 
     def converter(self, lin, rot):
         """
@@ -833,7 +845,7 @@ class MyRob(CRobLinkAngs):
             left_motor = 0.15
         if right_motor > 0.15:
             right_motor = 0.15
-        logging.debug(f'The velocity command given to the motors is ({round(left_motor, 3)},{round(right_motor, 3)})')
+        # logging.debug(f'The velocity command given to the motors is ({round(left_motor, 3)},{round(right_motor, 3)})')
         if not self.onRot:
             self.velEstimator(left_motor, right_motor)
         self.driveMotors(left_motor, right_motor)
@@ -900,6 +912,16 @@ for i in range(1, len(sys.argv), 2):
 if __name__ == '__main__':
     logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s',
                         level=logging.DEBUG)
+    # set up logging to console
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    # set a format which is simpler for console use
+    formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+    console.setFormatter(formatter)
+    # add the handler to the root logger
+    logging.getLogger('').addHandler(console)
+
+    logger = logging.getLogger(__name__)
     rob = MyRob(rob_name, pos, [0.0, 90.0, -90.0, 180.0], host)
     rob.f = f
     if mapc != None:
