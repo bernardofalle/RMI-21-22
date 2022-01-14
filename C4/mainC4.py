@@ -834,7 +834,8 @@ class MyRob(CRobLinkAngs):
         if right_motor > 0.15:
             right_motor = 0.15
         logging.debug(f'The velocity command given to the motors is ({round(left_motor, 3)},{round(right_motor, 3)})')
-        self.velEstimator(left_motor, right_motor)
+        if not self.onRot:
+            self.velEstimator(left_motor, right_motor)
         self.driveMotors(left_motor, right_motor)
 
 
