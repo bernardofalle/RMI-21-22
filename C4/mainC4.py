@@ -133,6 +133,7 @@ class MyRob(CRobLinkAngs):
         if self.endCycle:
             # If you are rotating
             if self.onRot:
+                logging.debug('Rotating...')
                 # Start rotating to the predefined. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
 
@@ -182,6 +183,7 @@ class MyRob(CRobLinkAngs):
                 self.onRot = True
 
             else:
+                logging.debug(f'Ended cycle on ({self.measures.x},{self.measures.y})')
                 # If it doesn't have anything in front, nor is in middle of a rotation, nor is it searching for a next
                 # position, add the walked, known and unknown coordinates
                 self.appendWalked()
@@ -194,6 +196,7 @@ class MyRob(CRobLinkAngs):
 
                 # If it is on an already known coordinate
                 if self.amknown:
+                    logging.info('I am on a known cell')
                     # Starts the searching variable
                     self.searching = True
 
@@ -353,7 +356,7 @@ class MyRob(CRobLinkAngs):
             if self.counter == 0:
                 xin = round(self.measures.x)
                 self.obj = xin + 2
-                self.lin = 0.15
+                self.lin = 0.10
                 self.integral = 0
                 self.minus = False
             err = self.obj - self.measures.x
@@ -361,7 +364,7 @@ class MyRob(CRobLinkAngs):
             if self.counter == 0:
                 yin = round(self.measures.y)
                 self.obj = yin + 2
-                self.lin = 0.15
+                self.lin = 0.10
                 self.integral = 0
                 self.minus = False
             err = self.obj - self.measures.y
@@ -369,7 +372,7 @@ class MyRob(CRobLinkAngs):
             if self.counter == 0:
                 xin = round(self.measures.x)
                 self.obj = xin - 2
-                self.lin = 0.15
+                self.lin = 0.10
                 self.integral = 0
                 self.minus = True
             err = -self.obj + self.measures.x
@@ -377,7 +380,7 @@ class MyRob(CRobLinkAngs):
             if self.counter == 0:
                 yin = round(self.measures.y)
                 self.obj = yin - 2
-                self.lin = 0.15
+                self.lin = 0.10
                 self.integral = 0
                 self.minus = True
             err = -self.obj + self.measures.y
@@ -398,10 +401,10 @@ class MyRob(CRobLinkAngs):
         self.rotate(1, 0, 0, objective, True)
 
         # Limiting the velocities
-        if self.lin > 0.14:
-            self.lin = 0.14
-        if self.rot > 0.14:
-            self.rot = 0.14
+        if self.lin > 0.10:
+            self.lin = 0.10
+        if self.rot > 0.15:
+            self.rot = 0.15
 
         # Sending the velocities
         self.converter(self.lin, self.rot)
