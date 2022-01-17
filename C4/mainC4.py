@@ -784,9 +784,9 @@ class MyRob(CRobLinkAngs):
         robot_radius = 0.5 #0.5 diameter
 
         if self.corrCompass() == 0:
-            if center >= 1.2:
+            if center >= 1.2 and back >= 1.2:
                 wall = self.round_even(last_pose[0]) + 0.8, last_pose[1]
-                current_pose = (wall[0] - self.distance(center) - robot_radius, last_pose[1])
+                current_pose = (wall[0] - self.distance((center + back)/2) - robot_radius, last_pose[1])
             # elif left >= 1.2 :
             #     wall = last_pose[0], last_pose[1] + 1
             #     current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
@@ -795,9 +795,9 @@ class MyRob(CRobLinkAngs):
             #     current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
 
         elif self.corrCompass() == 90:
-            if center >= 1.2:
+            if center >= 1.2 and back >= 1.2:
                 wall = last_pose[0], self.round_even(last_pose[1]) + 0.8
-                current_pose = (last_pose[0], wall[1] - self.distance(center) - robot_radius)
+                current_pose = (last_pose[0], wall[1] - self.distance((center + back)/2) - robot_radius)
             # elif left >= 1.2 :
             #     wall = last_pose[0] -  1, last_pose[1]
             #     current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
@@ -806,9 +806,9 @@ class MyRob(CRobLinkAngs):
             #     current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
         
         elif self.corrCompass() == 180:
-            if center >= 1.2:
+            if center >= 1.2 and back >= 1.2:
                 wall = self.round_even(last_pose[0]) - 0.8, last_pose[1]
-                current_pose = (wall[0] + self.distance(center) + robot_radius, last_pose[1])
+                current_pose = (wall[0] + self.distance((center + back)/2) + robot_radius, last_pose[1])
             # elif left >= 1.2 :
             #     wall = last_pose[0], last_pose[1] - 1
             #     current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
@@ -817,9 +817,9 @@ class MyRob(CRobLinkAngs):
             #     current_pose = (last_pose[0], wall[1] - self.distance(right) - robot_radius)
         
         elif self.corrCompass() == -90:
-            if center >= 1.2:
+            if center >= 1.2 and back >= 1.2:
                 wall = last_pose[0], self.round_even(last_pose[1]) - 0.8
-                current_pose = (last_pose[0], wall[1] + self.distance(center) + robot_radius)
+                current_pose = (last_pose[0], wall[1] + self.distance((center + back)/2) + robot_radius)
             # elif left >= 1.2 :
             #     wall = last_pose[0] +  1, last_pose[1]
             #     current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
@@ -828,8 +828,7 @@ class MyRob(CRobLinkAngs):
             #     current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
         
         if current_pose:
-            print(f'Wall Close, I believe I am at {current_pose}')
-            print(f'Wall Close, I believe I was at {last_pose}')
+            logging.debug(f'Wall Close, I believe I am at {current_pose} and I believed I wass at {last_pose}')
             return current_pose
 
     def round_even(self, number):
@@ -925,7 +924,7 @@ if __name__ == '__main__':
     logging.getLogger('').addHandler(console)
 
     logger = logging.getLogger(__name__)
-    rob = MyRob(rob_name, pos, [0.0, 90.0, -90.0, 180.0], host)
+    rob = MyRob(rob_name, pos, [0.0, 90.0, -90.0, 0.0], host)
     rob.f = f
     if mapc != None:
         rob.setMap(mapc.labMap)
