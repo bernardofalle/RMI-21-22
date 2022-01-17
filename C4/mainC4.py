@@ -111,19 +111,27 @@ class MyRob(CRobLinkAngs):
         self.real_y = self.measures.y
         self.measures.x = self.pose[-1][0]
         self.measures.y = self.pose[-1][1]
-        threshold_warn = 0.2
-        threshold_error = 0.5
+        threshold_warn = 0.5
+        threshold_error = 1
+        threshold_critical = 2
         difference_x = round(self.measures.x - self.real_x, 3)
         difference_y = round(self.measures.y - self.real_y, 3)
-        logging.debug(f'The real GPS values are (X,Y): ({round(self.real_x, 3)},{round(self.real_y, 3)})')
-        logging.debug(f'The calculates GPS values are: ({round(self.measures.x, 3)},{round(self.measures.y, 3)})')
-        logging.debug(f'The difference between values is ({difference_x},{difference_y})')
-        if difference_y >= threshold_warn or difference_x >= threshold_warn:
-            logging.warning(f'A lot of error experienced, larger than {threshold_warn}')
-        if difference_y >= threshold_error or difference_x >= threshold_error:
-            logging.error(f'Enormous error experienced, larger than {threshold_error}')
-        center_id = 0
-        center_sensor = self.measures.irSensor[center_id]
+        difference_distance = round(math.sqrt(difference_y ** 2 + difference_x ** 2), 3)
+        center_sensor = self.measures.irSensor[0]
+        left_sensor = self.measures.irSensor[1]
+        right_sensor = self.measures.irSensor[2]
+        back_sensor = self.measures.irSensor[3]
+        if not self.onRot:
+            logging.debug(f'The real GPS values are (X,Y): ({round(self.real_x, 3)},{round(self.real_y, 3)})')
+            logging.debug(f'The calculates GPS values are: ({round(self.measures.x, 3)},{round(self.measures.y, 3)})')
+            logging.debug(f'The difference between values is ({difference_x},{difference_y})')
+            logging.debug(f'The values of the sensors are (f, l, r, b): {center_sensor, left_sensor, right_sensor, back_sensor}')
+            if difference_distance >= threshold_critical:
+                logging.critical(f'Gigantic error experienced, larger than {threshold_critical}')
+            elif difference_distance >= threshold_error:
+                logging.error(f'Enormous error experienced, larger than {threshold_error}')
+            elif difference_distance >= threshold_warn:
+                logging.warning(f'A lot of error experienced, larger than {threshold_warn}')
 
         # Check if the compass is facing south
         self.checkChangeCompass()
@@ -131,6 +139,7 @@ class MyRob(CRobLinkAngs):
         # If it is facing south, offset the compass
         if self.South and self.measures.compass < -90:
             self.measures.compass += 360
+
 
         # If it has travelled a distance of 2
         if self.endCycle:
@@ -142,6 +151,7 @@ class MyRob(CRobLinkAngs):
 
             # If it is following a path and needs to locate the next position
             elif self.searching:
+                logging.info('Following path... ')
                 # If the path has ended, reset the variables
                 if len(self.path) == 0:
                     self.haspath = False
@@ -180,8 +190,9 @@ class MyRob(CRobLinkAngs):
                         self.path = self.path[1:]
 
             # If it is not following a path and there is an obstacle close to the front of the agent
-            elif center_sensor > 1.2 and not self.pathfollowing:
+            elif (center_sensor + back_sensor)/2 > 1.1 and not self.pathfollowing:
                 # Search its surroundings for an available path and rotates to it
+                logging.info('Cannot walk in front, checking sides...')
                 self.whosFree()
                 self.onRot = True
 
@@ -222,6 +233,7 @@ class MyRob(CRobLinkAngs):
                         # Start the variables
                         self.pathfollowing = True
                         self.haspath = True
+                        logging.info(f'I calculated a path which is: \n{self.path}')
 
                     else:
                         # If it has a path already, walk in front
@@ -233,6 +245,7 @@ class MyRob(CRobLinkAngs):
 
         else:
             # If it is not in the end of a cycle, move in front
+            logging.info(f'I am moving in front and facing {self.measures.compass} ({self.corrCompass()})')
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
 
     def a(self, start, goal_list):
@@ -655,12 +668,13 @@ class MyRob(CRobLinkAngs):
         #     self.objective = current + 180
         else:
             self.objective = current + 180
-            print('''I'm lost, please help me''')
+            # print('''I'm lost, please help me''')
 
         if self.objective <= -180:
             self.objective += 360
         if self.objective > 180:
             self.objective -= 360
+        logging.info(f'Found an empty spot at {self.objective}')
 
     def gpsConverter(self):
         """
@@ -782,60 +796,74 @@ class MyRob(CRobLinkAngs):
     
     def corrector(self, last_pose):
         current_pose = None
+        direction = None
         # last_pose = self.pose[-1]
         center = self.measures.irSensor[0]
         left = self.measures.irSensor[1]
         right = self.measures.irSensor[2]
         back = self.measures.irSensor[3]
-        wall = 0,0
         robot_radius = 0.5 #0.5 diameter
+        distance_to_wall = 0.9
 
         if self.corrCompass() == 0:
             if center >= 1.2 and back >= 1.2:
-                wall = self.round_even(last_pose[0]) + 0.8, last_pose[1]
+                wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
                 current_pose = (wall[0] - self.distance((center + back)/2) - robot_radius, last_pose[1])
-            # elif left >= 1.2 :
-            #     wall = last_pose[0], last_pose[1] + 1
-            #     current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
-            # elif right >= 1.2 :
-            #     wall = last_pose[0], last_pose[1] - 1
-            #     current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
+                direction = 'Front'
+            elif left >= 1.5:
+                wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
+                current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
+                direction = 'Left'
+            elif right >= 1.5:
+                wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
+                current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
+                direction = 'Right'
 
         elif self.corrCompass() == 90:
             if center >= 1.2 and back >= 1.2:
-                wall = last_pose[0], self.round_even(last_pose[1]) + 0.8
+                wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
                 current_pose = (last_pose[0], wall[1] - self.distance((center + back)/2) - robot_radius)
-            # elif left >= 1.2 :
-            #     wall = last_pose[0] -  1, last_pose[1]
-            #     current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
-            # elif right >= 1.2 :
-            #     wall = last_pose[0] + 1, last_pose[1]
-            #     current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
-        
+                direction = 'Front'
+            elif left >= 1.5:
+                wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
+                current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
+                direction = 'Left'
+            elif right >= 1.5:
+                wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
+                current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
+                direction = 'Right'
+
         elif self.corrCompass() == 180:
             if center >= 1.2 and back >= 1.2:
-                wall = self.round_even(last_pose[0]) - 0.8, last_pose[1]
+                wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
                 current_pose = (wall[0] + self.distance((center + back)/2) + robot_radius, last_pose[1])
-            # elif left >= 1.2 :
-            #     wall = last_pose[0], last_pose[1] - 1
-            #     current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
-            # elif right >= 1.2 :
-            #     wall = last_pose[0], last_pose[1] + 1
-            #     current_pose = (last_pose[0], wall[1] - self.distance(right) - robot_radius)
-        
+                direction = 'Front'
+            elif left >= 1.5:
+                wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
+                current_pose = (last_pose[0], wall[1] + self.distance(left) - robot_radius)
+                direction = 'Left'
+            elif right >= 1.5:
+                wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
+                current_pose = (last_pose[0], wall[1] - self.distance(right) + robot_radius)
+                direction = 'Right'
+
         elif self.corrCompass() == -90:
             if center >= 1.2 and back >= 1.2:
-                wall = last_pose[0], self.round_even(last_pose[1]) - 0.8
+                wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
                 current_pose = (last_pose[0], wall[1] + self.distance((center + back)/2) + robot_radius)
-            # elif left >= 1.2 :
-            #     wall = last_pose[0] +  1, last_pose[1]
-            #     current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
-            # elif right >= 1.2 :
-            #     wall = last_pose[0] - 1, last_pose[1]
-            #     current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
-        
+                direction = 'Front'
+            elif left >= 1.5:
+                wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
+                current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
+                direction = 'Left'
+            elif right >= 1.5:
+                wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
+                current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
+                direction = 'Right'
+
         if current_pose:
-            logging.debug(f'Wall Close, I believe I am at {current_pose} and I believed I was at {last_pose}')
+            current_pose = (round(current_pose[0], 3), round(current_pose[1], 3))
+            logging.debug(f'Wall close to the {direction}, I believe I am at {current_pose} and I believed I was at {last_pose}')
             return current_pose
 
     def round_even(self, number):
