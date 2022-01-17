@@ -111,14 +111,17 @@ class MyRob(CRobLinkAngs):
         self.real_y = self.measures.y
         self.measures.x = self.pose[-1][0]
         self.measures.y = self.pose[-1][1]
-        threshold_warn = 0.3
+        threshold_warn = 0.2
+        threshold_error = 0.5
         difference_x = round(self.measures.x - self.real_x, 3)
         difference_y = round(self.measures.y - self.real_y, 3)
         logging.debug(f'The real GPS values are (X,Y): ({round(self.real_x, 3)},{round(self.real_y, 3)})')
         logging.debug(f'The calculates GPS values are: ({round(self.measures.x, 3)},{round(self.measures.y, 3)})')
         logging.debug(f'The difference between values is ({difference_x},{difference_y})')
         if difference_y >= threshold_warn or difference_x >= threshold_warn:
-            logging.warning('A lot or error experienced')
+            logging.warning(f'A lot of error experienced, larger than {threshold_warn}')
+        if difference_y >= threshold_error or difference_x >= threshold_error:
+            logging.error(f'Enormous error experienced, larger than {threshold_error}')
         center_id = 0
         center_sensor = self.measures.irSensor[center_id]
 
@@ -133,7 +136,7 @@ class MyRob(CRobLinkAngs):
         if self.endCycle:
             # If you are rotating
             if self.onRot:
-                logging.debug('Rotating...')
+                logging.info(f'Rotating to {self.objective}')
                 # Start rotating to the predefined. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
 
@@ -145,7 +148,7 @@ class MyRob(CRobLinkAngs):
                     self.searching = False
                 else:
                     # Find the current location of the robot
-                    loc = round(self.measures.x), round(self.measures.y)
+                    loc = self.round_even(self.measures.x), self.round_even(self.measures.y)
 
                     # Calculate the difference between the current location and the next position of the path
                     x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
@@ -203,7 +206,7 @@ class MyRob(CRobLinkAngs):
                     # If it does not have a path
                     if not self.haspath:
                         # Get the current coordinates
-                        start = round(self.measures.x), round(self.measures.y)
+                        start = self.round_even(self.measures.x), self.round_even(self.measures.y)
 
                         # Define the list of possible ends
                         end_list = self.unknown
@@ -354,7 +357,7 @@ class MyRob(CRobLinkAngs):
         current = self.corrCompass()
         if current == 0:
             if self.counter == 0:
-                xin = round(self.measures.x)
+                xin = self.round_even(self.measures.x)
                 self.obj = xin + 2
                 self.lin = 0.10
                 self.integral = 0
@@ -362,7 +365,7 @@ class MyRob(CRobLinkAngs):
             err = self.obj - self.measures.x
         elif current == 90:
             if self.counter == 0:
-                yin = round(self.measures.y)
+                yin = self.round_even(self.measures.y)
                 self.obj = yin + 2
                 self.lin = 0.10
                 self.integral = 0
@@ -370,7 +373,7 @@ class MyRob(CRobLinkAngs):
             err = self.obj - self.measures.y
         elif current == 180:
             if self.counter == 0:
-                xin = round(self.measures.x)
+                xin = self.round_even(self.measures.x)
                 self.obj = xin - 2
                 self.lin = 0.10
                 self.integral = 0
@@ -378,7 +381,7 @@ class MyRob(CRobLinkAngs):
             err = -self.obj + self.measures.x
         elif current == -90:
             if self.counter == 0:
-                yin = round(self.measures.y)
+                yin = self.round_even(self.measures.y)
                 self.obj = yin - 2
                 self.lin = 0.10
                 self.integral = 0
@@ -415,8 +418,8 @@ class MyRob(CRobLinkAngs):
 
             # Check if it is in a beacon, and if so, annotates it
             if self.measures.ground == 1 or self.measures.ground == 2:
-                if (round(self.measures.x), round(self.measures.y)) not in self.beacon_coordinates:
-                    self.beacon_coordinates.append((round(self.measures.x), round(self.measures.y)))
+                if (self.round_even(self.measures.x), self.round_even(self.measures.y)) not in self.beacon_coordinates:
+                    self.beacon_coordinates.append((self.round_even(self.measures.x), self.round_even(self.measures.y)))
 
             # Defines a new objective
             if self.minus:
@@ -426,25 +429,25 @@ class MyRob(CRobLinkAngs):
 
             # Placing the current and previous location on the map matrix. Calls the wall function to map the walls.
             if current == 0:
-                x = round(self.measures.x)
+                x = self.round_even(self.measures.x)
                 self.walls(0, self.last_x + 2, self.last_y)
                 self.maze.matrix[self.last_y][self.last_x + 1] = 'X'
                 self.maze.matrix[self.last_y][self.last_x + 2] = 'X'
                 self.last_x = x + 27
             elif current == 90:
-                y = round(self.measures.y)
+                y = self.round_even(self.measures.y)
                 self.walls(90, self.last_x, self.last_y - 2)
                 self.maze.matrix[self.last_y - 1][self.last_x] = 'X'
                 self.maze.matrix[self.last_y - 2][self.last_x] = 'X'
                 self.last_y = -y + 13
             elif current == 180:
-                x = round(self.measures.x)
+                x = self.round_even(self.measures.x)
                 self.walls(180, self.last_x - 2, self.last_y)
                 self.maze.matrix[self.last_y][self.last_x - 1] = 'X'
                 self.maze.matrix[self.last_y][self.last_x - 2] = 'X'
                 self.last_x = x + 27
             elif current == -90:
-                y = round(self.measures.y)
+                y = self.round_even(self.measures.y)
                 self.walls(-90, self.last_x, self.last_y + 2)
                 self.maze.matrix[self.last_y + 1][self.last_x] = 'X'
                 self.maze.matrix[self.last_y + 2][self.last_x] = 'X'
@@ -648,14 +651,15 @@ class MyRob(CRobLinkAngs):
             self.objective = current + 90
         elif self.measures.irSensor[2] < 1:
             self.objective = current - 90
-        elif self.measures.irSensor[3] < 1:
-            self.objective = current + 180
+        # elif self.measures.irSensor[3] < 1:
+        #     self.objective = current + 180
         else:
+            self.objective = current + 180
             print('''I'm lost, please help me''')
 
         if self.objective <= -180:
             self.objective += 360
-        if self.objective >= 360:
+        if self.objective > 180:
             self.objective -= 360
 
     def gpsConverter(self):
@@ -677,6 +681,7 @@ class MyRob(CRobLinkAngs):
         :return:
         """
         if self.objective == 180:
+            logging.debug('Facing South')
             self.South = True
         else:
             self.South = False
@@ -687,8 +692,8 @@ class MyRob(CRobLinkAngs):
         :return:
         """
         # Get GPS values
-        x = round(self.measures.x)
-        y = round(self.measures.y)
+        x = self.round_even(self.measures.x)
+        y = self.round_even(self.measures.y)
         self.walked.append((x, y))
 
     def searchUnknown(self):
@@ -697,8 +702,8 @@ class MyRob(CRobLinkAngs):
         :return:
         """
         # Get GPS and compass values
-        x = round(self.measures.x)
-        y = round(self.measures.y)
+        x = self.round_even(self.measures.x)
+        y = self.round_even(self.measures.y)
         current = radians(self.corrCompass())
         entries = []
 
@@ -715,6 +720,7 @@ class MyRob(CRobLinkAngs):
         # Avoid repetition between lists
         for entry in entries:
             if entry not in self.unknown and entry not in self.known:
+                logging.info(f'Added {entry} to unknown list')
                 self.unknown.append(entry)
 
     def searchKnown(self):
@@ -723,20 +729,22 @@ class MyRob(CRobLinkAngs):
         :return:
         """
         # Get GPS values
-        x = round(self.measures.x)
-        y = round(self.measures.y)
+        x = self.round_even(self.measures.x)
+        y = self.round_even(self.measures.y)
         entry = (x, y)
         last_entry = self.walked[-2]
         mid_entry = (int((last_entry[0] + entry[0]) / 2), (int((last_entry[1] + entry[1]) / 2)))
         # Append the coordinates if they are not there already, and remove if on unknown
         if entry in self.unknown:
             self.unknown.remove(entry)
+            logging.info(f'Removed {entry} of unknown list')
         if mid_entry in self.unknown:
             self.unknown.remove(mid_entry)
         if mid_entry not in self.known:
             self.known.append(mid_entry)
         if entry not in self.known:
             self.known.append(entry)
+            logging.info(f'Added {entry} to known list')
             return False
         else:
             return True
@@ -764,12 +772,11 @@ class MyRob(CRobLinkAngs):
         current_velocity = (global_velocity[0], global_velocity[1])
         last_pose = self.pose[-1]
         current_pose = (last_pose[0] + current_velocity[0], last_pose[1] + current_velocity[1])
-        corrected_pose = self.corrector(current_pose)
+        corrected_pose = self.corrector(last_pose)
         if corrected_pose:
-            self.pose.append(corrected_pose)
-        else:
-            self.pose.append(current_pose)
-    
+            current_pose = (corrected_pose[0] + current_velocity[0], corrected_pose[1] + current_velocity[1])
+        self.pose.append(current_pose)
+
     def distance(self, x):
         return 1 / x
     
@@ -828,7 +835,7 @@ class MyRob(CRobLinkAngs):
             #     current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
         
         if current_pose:
-            logging.debug(f'Wall Close, I believe I am at {current_pose} and I believed I wass at {last_pose}')
+            logging.debug(f'Wall Close, I believe I am at {current_pose} and I believed I was at {last_pose}')
             return current_pose
 
     def round_even(self, number):
@@ -847,7 +854,7 @@ class MyRob(CRobLinkAngs):
             left_motor = 0.15
         if right_motor > 0.15:
             right_motor = 0.15
-        # logging.debug(f'The velocity command given to the motors is ({round(left_motor, 3)},{round(right_motor, 3)})')
+        # logging.debug(f'The velocity command given to the motors is ({distance((center + back)/2)(left_motor, 3)},{round(right_motor, 3)})')
         if not self.onRot:
             self.velEstimator(left_motor, right_motor)
         self.driveMotors(left_motor, right_motor)
