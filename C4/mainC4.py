@@ -145,7 +145,7 @@ class MyRob(CRobLinkAngs):
         if self.endCycle:
             # If you are rotating
             if self.onRot:
-                logging.info(f'Rotating to {self.objective}')
+                logging.debug(f'Rotating to {self.objective}')
                 # Start rotating to the predefined. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
 
@@ -190,9 +190,10 @@ class MyRob(CRobLinkAngs):
                         self.path = self.path[1:]
 
             # If it is not following a path and there is an obstacle close to the front of the agent
-            elif (center_sensor + back_sensor)/2 > 1.1 and not self.pathfollowing:
+            elif (center_sensor + back_sensor)/2 >= 1.0 and not self.pathfollowing:
                 # Search its surroundings for an available path and rotates to it
                 logging.info('Cannot walk in front, checking sides...')
+                self.searchUnknown()
                 self.whosFree()
                 self.onRot = True
 
@@ -203,6 +204,8 @@ class MyRob(CRobLinkAngs):
                 self.appendWalked()
                 self.amknown = self.searchKnown()
                 self.searchUnknown()
+                logging.debug(f'I have these coordinates as known: {self.known}')
+                logging.debug(f'I have these coordinates as unknown: {self.unknown}')
 
                 # If it was facing South, reset the variable (it will be checked later)
                 if self.South:
@@ -233,9 +236,7 @@ class MyRob(CRobLinkAngs):
                         # Start the variables
                         self.pathfollowing = True
                         self.haspath = True
-                        logging.info(f'I calculated a path which is: \n{self.path}')
-                        print(self.known)
-                        print(self.unknowng)
+                        logging.info(f'I calculated a path which is: {self.path}')
                     else:
                         # If it has a path already, walk in front
                         self.endCycle = False
@@ -246,7 +247,7 @@ class MyRob(CRobLinkAngs):
 
         else:
             # If it is not in the end of a cycle, move in front
-            logging.info(f'I am moving in front and facing {self.measures.compass} ({self.corrCompass()})')
+            logging.debug(f'I am moving in front and facing {self.measures.compass} ({self.corrCompass()})')
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
 
         self.writeMap()
@@ -497,121 +498,127 @@ class MyRob(CRobLinkAngs):
                 :param y:
                 :return:
                 """
+        str = None
+
         if compass == 0:
             if self.measures.irSensor[0] >= 1.6 and self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[
                 2] >= 1.6:
-                print('deadend 13')
+                str = 'deadend 13'
                 self.maze.matrix[y + 1][x] = '-'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 6')
+                str = 'corner 6'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[2] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 8')
+                str = 'corner 8'
                 self.maze.matrix[y + 1][x] = '-'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[2] >= 1.6:
-                print('both walls')
+                str = 'both walls'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y + 1][x] = '-'
             elif self.measures.irSensor[2] >= 1.6:
-                print('right wall')
+                str = 'right wall'
                 self.maze.matrix[y + 1][x] = '-'
             elif self.measures.irSensor[1] >= 1.6:
-                print('left wall')
+                str = 'left wall'
                 self.maze.matrix[y - 1][x] = '-'
             elif self.measures.irSensor[0] >= 1.6:
-                print('wall in front')
+                str = 'wall in front'
                 self.maze.matrix[y][x + 1] = '|'
 
         elif compass == 90:
             if self.measures.irSensor[0] >= 1.6 and self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[
                 2] >= 1.6:
-                print('deadend 14')
+                str = 'deadend 14'
                 self.maze.matrix[y][x + 1] = '|'
                 self.maze.matrix[y + 1][x] = '-'
                 self.maze.matrix[y][x - 1] = '|'
             elif self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 5')
+                str = 'corner 5'
                 self.maze.matrix[y][x - 1] = '|'
                 self.maze.matrix[y - 1][x] = '-'
             elif self.measures.irSensor[2] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 6')
+                str = 'corner 6'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[2] >= 1.6 and self.measures.irSensor[1] >= 1.6:
-                print('both walls')
+                str = 'both walls'
                 self.maze.matrix[y][x - 1] = '|'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[1] >= 1.6:
-                print('left wall')
+                str = 'left wall'
                 self.maze.matrix[y][x - 1] = '|'
             elif self.measures.irSensor[2] >= 1.6:
-                print('right wall')
+                str = 'right wall'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[0] >= 1.6:
-                print('wall in front')
+                str = 'wall in front'
                 self.maze.matrix[y - 1][x] = '-'
 
         elif compass == 180:
             if self.measures.irSensor[0] >= 1.6 and self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[
                 2] >= 1.6:
-                print('deadend 15')
+                str = 'deadend 15'
                 self.maze.matrix[y + 1][x] = '-'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y][x - 1] = '|'
             elif self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 7')
+                str = 'corner 7'
                 self.maze.matrix[y + 1][x] = '-'
                 self.maze.matrix[y][x - 1] = '|'
             elif self.measures.irSensor[2] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 5')
+                str = 'corner 5'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y][x - 1] = '|'
             elif self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[2] >= 1.6:
-                print('both walls')
+                str = 'both walls'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y + 1][x] = '-'
             elif self.measures.irSensor[1] >= 1.6:
-                print('left wall')
+                str = 'left wall'
                 self.maze.matrix[y + 1][x] = '-'
             elif self.measures.irSensor[2] >= 1.6:
-                print('right wall')
+                str = 'right wall'
                 self.maze.matrix[y - 1][x] = '-'
             elif self.measures.irSensor[0] >= 1.6:
-                print('wall in front')
+                str = 'wall in front'
                 self.maze.matrix[y][x - 1] = '|'
 
         elif compass == -90:
             if self.measures.irSensor[0] >= 1.6 and self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[
                 2] >= 1.6:
-                print('deadend 12')
+                str = 'deadend 12'
                 self.maze.matrix[y][x + 1] = '|'
                 self.maze.matrix[y - 1][x] = '-'
                 self.maze.matrix[y][x - 1] = '|'
             elif self.measures.irSensor[1] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 8')
+                str = 'corner 8'
                 self.maze.matrix[y][x + 1] = '|'
                 self.maze.matrix[y + 1][x] = '-'
             elif self.measures.irSensor[2] >= 1.6 and self.measures.irSensor[0] >= 1.6:
-                print('corner 7')
+                str = 'corner 7'
                 self.maze.matrix[y][x - 1] = '|'
                 self.maze.matrix[y + 1][x] = '-'
             elif self.measures.irSensor[2] >= 1.6 and self.measures.irSensor[1] >= 1.6:
-                print('both walls')
+                str = 'both walls'
                 self.maze.matrix[y][x - 1] = '|'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[1] >= 1.6:
-                print('left wall')
+                str = 'left wall'
                 self.maze.matrix[y][x + 1] = '|'
             elif self.measures.irSensor[2] >= 1.6:
-                print('right wall')
+                str = 'right wall'
                 self.maze.matrix[y][x - 1] = '|'
             elif self.measures.irSensor[0] >= 1.6:
-                print('wall in front')
+                str = 'wall in front'
                 self.maze.matrix[y + 1][x] = '-'
+
+        if str:
+            logging.info(f'Mapped as {str}')
+
 
     def rotate(self, Kp, Kd, Ki, obj, retrot):
         """
@@ -744,8 +751,8 @@ class MyRob(CRobLinkAngs):
             entries.append((x + round(cos(current)), y + round(sin(current))))
         if self.measures.irSensor[1] < 1:
             entries.append((x + round(cos(current + pi / 2)), y + round(sin(current + pi / 2))))
-        if self.measures.irSensor[3] < 1:
-            entries.append((x + round(cos(current + pi)), y + round(sin(current + pi))))
+        # if self.measures.irSensor[3] < 1:
+        #     entries.append((x + round(cos(current + pi)), y + round(sin(current + pi))))
         if self.measures.irSensor[2] < 1:
             entries.append((x + round(cos(current - pi / 2)), y + round(sin(current - pi / 2))))
 
@@ -772,8 +779,10 @@ class MyRob(CRobLinkAngs):
             logging.info(f'Removed {entry} of unknown list')
         if mid_entry in self.unknown:
             self.unknown.remove(mid_entry)
+            logging.info(f'Removed {mid_entry} of unknown list')
         if mid_entry not in self.known:
             self.known.append(mid_entry)
+            logging.info(f'Added {mid_entry} to known list')
         if entry not in self.known:
             self.known.append(entry)
             logging.info(f'Added {entry} to known list')
@@ -971,7 +980,7 @@ if __name__ == '__main__':
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     # set a format which is simpler for console use
-    formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+    formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
     console.setFormatter(formatter)
     # add the handler to the root logger
     logging.getLogger('').addHandler(console)
