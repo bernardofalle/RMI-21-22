@@ -48,6 +48,7 @@ class MyRob(CRobLinkAngs):
         self.pose = [(0, 0)]
         self.WallClose = False
 
+
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
     def setMap(self, labMap):
@@ -240,15 +241,18 @@ class MyRob(CRobLinkAngs):
                     else:
                         # If it has a path already, walk in front
                         self.endCycle = False
+                        logging.info(f'I already have a path, which is {self.path}')
 
                 # If it has not following paths, move in front
                 if not self.pathfollowing:
                     self.endCycle = False
+                    logging.info(f'I am not following paths')
 
         else:
-            # If it is not in the end of a cycle, move in front
-            logging.debug(f'I am moving in front and facing {self.measures.compass} ({self.corrCompass()})')
+        # If it is not in the end of a cycle, move in front
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
+            logging.debug(f'I am moving in front and facing {self.measures.compass} ({self.corrCompass()}, with the '
+                          f'objective {self.obj})')
 
         self.writeMap()
         
@@ -837,7 +841,7 @@ class MyRob(CRobLinkAngs):
         back = self.measures.irSensor[3]
         robot_radius = 0.5 #0.5 diameter
         distance_to_wall = 0.9
-        difference_threshold = 5
+        difference_threshold = 3
 
         if self.compare_compass() <= difference_threshold:
             if self.corrCompass() == 0:
@@ -898,7 +902,9 @@ class MyRob(CRobLinkAngs):
 
             if current_pose:
                 current_pose = (round(current_pose[0], 3), round(current_pose[1], 3))
+                last_pose = (round(last_pose[0], 3), round(last_pose[1], 3))
                 logging.debug(f'Wall close to the {direction}, I believe I am at {current_pose} and I believed I was at {last_pose}')
+                logging.debug(f'Wall coordinates: {wall}')
                 return current_pose
 
     def round_even(self, number):
@@ -915,9 +921,13 @@ class MyRob(CRobLinkAngs):
         right_motor = lin + rot / 2
         if left_motor > 0.15:
             left_motor = 0.15
+        elif left_motor < -0.15:
+            left_motor = -0.15
         if right_motor > 0.15:
             right_motor = 0.15
-        # logging.debug(f'The velocity command given to the motors is ({distance((center + back)/2)(left_motor, 3)},{round(right_motor, 3)})')
+        elif right_motor < -0.15:
+            right_motor = -0.15
+        logging.debug(f'The velocity command given to the motors is ({round(left_motor, 3)},{round(right_motor, 3)})')
         if not self.onRot:
             self.velEstimator(left_motor, right_motor)
         self.driveMotors(left_motor, right_motor)
