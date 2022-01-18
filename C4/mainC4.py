@@ -141,9 +141,9 @@ class MyRob(CRobLinkAngs):
         if self.South and self.measures.compass < -90:
             self.measures.compass += 360
 
-
         # If it has travelled a distance of 2
         if self.endCycle:
+            logging.info(f'Cycle ended on {round(self.measures.x), round(self.measures.y)}')
             # If you are rotating
             if self.onRot:
                 logging.debug(f'Rotating to {self.objective}')
@@ -180,6 +180,7 @@ class MyRob(CRobLinkAngs):
                         # If the differences are (0,0), the next position in path is the current one,
                         # so does not rotate.
                         self.onRot = False
+                    logging.info(f'To go from {loc} to {self.path[0]}, it needs to go in {self.objective}')
                     if self.objective != current:
                         # If the the objective orientation is different then the current one, rotate to it
                         self.onRot = True
@@ -835,7 +836,7 @@ class MyRob(CRobLinkAngs):
         back = self.measures.irSensor[3]
         robot_radius = 0.5 #0.5 diameter
         distance_to_wall = 1
-        difference_threshold = 3
+        difference_threshold = 2
 
         if self.compare_compass() <= difference_threshold:
             if self.corrCompass() == 0:
