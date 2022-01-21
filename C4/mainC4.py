@@ -153,14 +153,17 @@ class MyRob(CRobLinkAngs):
             # If it is following a path and needs to locate the next position
             elif self.searching:
                 logging.info('Following path... ')
+                # Find the current location of the robot
+                loc = self.round_even(self.measures.x), self.round_even(self.measures.y)
+
+                # If you are on the first member of path, remove it
+                if loc == self.path[0]:
+                    self.path = self.path[1:]
                 # If the path has ended, reset the variables
                 if len(self.path) == 0:
                     self.haspath = False
                     self.searching = False
                 else:
-                    # Find the current location of the robot
-                    loc = self.round_even(self.measures.x), self.round_even(self.measures.y)
-
                     # Calculate the difference between the current location and the next position of the path
                     x, y = (self.path[0][0] - loc[0]), (self.path[0][1] - loc[1])
 
@@ -189,7 +192,7 @@ class MyRob(CRobLinkAngs):
                         # next path coordinate
                         self.onRot = False
                         self.searching = False
-                        self.path = self.path[1:]
+                        # self.path = self.path[1:]
 
             # If it is not following a path and there is an obstacle close to the front of the agent
             elif (center_sensor + back_sensor)/2 >= 1.0 and not self.pathfollowing:
@@ -843,8 +846,9 @@ class MyRob(CRobLinkAngs):
                 if center >= 1.2 and back >= 1.2:
                     wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
                     current_pose = (wall[0] - self.distance((center + back)/2) - robot_radius, last_pose[1])
+                    last_pose = current_pose
                     direction = 'Front'
-                elif left >= 1.5:
+                if left >= 1.5:
                     wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
                     current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
                     direction = 'Left'
@@ -857,8 +861,9 @@ class MyRob(CRobLinkAngs):
                 if center >= 1.2 and back >= 1.2:
                     wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
                     current_pose = (last_pose[0], wall[1] - self.distance((center + back)/2) - robot_radius)
+                    last_pose = current_pose
                     direction = 'Front'
-                elif left >= 1.5:
+                if left >= 1.5:
                     wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
                     current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
                     direction = 'Left' 
@@ -871,8 +876,9 @@ class MyRob(CRobLinkAngs):
                 if center >= 1.2 and back >= 1.2:
                     wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
                     current_pose = (wall[0] + self.distance((center + back)/2) + robot_radius, last_pose[1])
+                    last_pose = current_pose
                     direction = 'Front'
-                elif left >= 1.5:
+                if left >= 1.5:
                     wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
                     current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
                     direction = 'Left'
@@ -885,8 +891,9 @@ class MyRob(CRobLinkAngs):
                 if center >= 1.2 and back >= 1.2:
                     wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
                     current_pose = (last_pose[0], wall[1] + self.distance((center + back)/2) + robot_radius)
+                    last_pose = current_pose
                     direction = 'Front'
-                elif left >= 1.5:
+                if left >= 1.5:
                     wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
                     current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
                     direction = 'Left'
@@ -922,6 +929,7 @@ class MyRob(CRobLinkAngs):
             right_motor = 0.15
         elif right_motor < -0.15:
             right_motor = -0.15
+        logging.debug(f'The velocity command given to the converter is (lin: {round(lin, 3)}, rot: {round(rot, 3)})')
         logging.debug(f'The velocity command given to the motors is ({round(left_motor, 3)},{round(right_motor, 3)})')
         if not self.onRot:
             self.velEstimator(left_motor, right_motor)
@@ -990,13 +998,13 @@ if __name__ == '__main__':
     logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s',
                         level=logging.DEBUG)
     # set up logging to console
-    #console = logging.StreamHandler()
-    #console.setLevel(logging.INFO)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
     # set a format which is simpler for console use
-    #formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
-    #console.setFormatter(formatter)
+    formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
+    console.setFormatter(formatter)
     # add the handler to the root logger
-    #logging.getLogger('').addHandler(console)
+    logging.getLogger('').addHandler(console)
 
     logger = logging.getLogger(__name__)
     rob = MyRob(rob_name, pos, [0.0, 90.0, -90.0, 0.0], host)
