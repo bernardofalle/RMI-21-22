@@ -9,6 +9,7 @@ from astar import *
 import logging
 import numpy as np
 import itertools
+import sys
 
 CELLROWS = 7
 CELLCOLS = 14
@@ -41,12 +42,14 @@ class MyRob(CRobLinkAngs):
         self.pathfollowing = False
         self.haspath = False
         self.beacon_coordinates = [(0, 0)]
+        self.beacon_nums = []
         self.go_to_beacons = False
         self.f = None
         self.final_path = []
         self.estimated_velocity = [(0, 0)]
         self.pose = [(0, 0)]
         self.WallClose = False
+        self.go0 = False
 
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
@@ -221,18 +224,20 @@ class MyRob(CRobLinkAngs):
                     logging.info('I am on a known cell')
                     # Starts the searching variable
                     self.searching = True
-
                     # If it does not have a path
                     if not self.haspath:
                         # Get the current coordinates
                         start = self.round_even(self.measures.x), self.round_even(self.measures.y)
-
+                        #if self.go0 : 
+                        #    self.path, timeout = astar(self.maze.matrix, start, (0,0), time(), 0.5)
+                        #    print(self.path)
                         # Define the list of possible ends
                         end_list = self.unknown
 
                         # From the list of possible ends and the current coordinates, search the smallest path
                         end = self.a(start, end_list)
-
+                        if not end and self.go0:
+                            end = self.a(start, [(-1,0)])
                         # Remove the odd cells from the path, add the end and removing the start
                         self.path = [items for items in self.path if items[0] % 2 == 0 and items[1] % 2 == 0]
                         self.path.append((2 * end[0] - self.path[-1][0], 2 * end[1] - self.path[-1][1]))
@@ -257,8 +262,6 @@ class MyRob(CRobLinkAngs):
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
             logging.debug(f'I am moving in front and facing {self.measures.compass} ({self.corrCompass()}, with the '
                           f'objective {self.obj})')
-
-        self.writeMap()
         
     def a(self, start, goal_list):
         """
@@ -306,6 +309,9 @@ class MyRob(CRobLinkAngs):
         else:
             # After mapping the whole map, calculate the paths between beacons and prints the path
             #print('FULL MAPPING DONE ')
+            if self.go0:
+                self.finish()
+                sys.exit()
             I = (0,0)
             self.beacon_coordinates.remove(I)
             perms = list(itertools.permutations(self.beacon_coordinates))
@@ -324,25 +330,25 @@ class MyRob(CRobLinkAngs):
                     p, timeout = astar(self.maze.matrix, perm[i], perm[i + 1], time(), 0.5)
                     path.extend(p)
                     path.pop()
-                    print(path, i)
                 if len(self.final_path) == 0:
                     self.final_path = path
                 elif len(path) <= len(self.final_path) :
                     self.final_path = path
                 path = []
             self.final_path.append((0,0))
-            print(self.final_path)
             self.final_path = [i for i in self.final_path if i[0] % 2 == 0 and i[1] % 2 == 0]
 
             self.writePath()
             
-            self.maze.matrix[13][27] = 'I'
+            self.maze.matrix[13][27] = '0'
             if self.beacon_coordinates :
                 for e in self.beacon_coordinates:
                     y = 13 - e[1]
                     x = 27 + e[0]
-                    self.maze.matrix[y][x] = str(self.beacon_coordinates.index(e))
+                    self.maze.matrix[y][x] = str(self.beacon_nums[0])
+                    self.beacon_nums = self.beacon_nums[1:]
             self.writeMap()
+            self.go0 = True
 
     def writeMap(self):
         """
@@ -350,7 +356,7 @@ class MyRob(CRobLinkAngs):
         :return:
         """
         # Opens the file
-        f = open('mapping.out', 'w+')
+        f = open(self.f + '.out', 'w+')
 
         # For every element in the matrix, writes it in the file
         for line in self.maze.matrix:
@@ -454,7 +460,7 @@ class MyRob(CRobLinkAngs):
             if self.measures.ground != -1 :
                 if (self.round_even(self.measures.x), self.round_even(self.measures.y)) not in self.beacon_coordinates:
                     self.beacon_coordinates.append((self.round_even(self.measures.x), self.round_even(self.measures.y)))
-
+                    self.beacon_nums.append(self.measures.ground)
             # Defines a new objective
             if self.minus:
                 self.obj -= 2
@@ -848,14 +854,7 @@ class MyRob(CRobLinkAngs):
                     current_pose = (wall[0] - self.distance((center + back)/2) - robot_radius, last_pose[1])
                     last_pose = current_pose
                     direction = 'Front'
-                if left >= 1.5:
-                    wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
-                    current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
-                    direction = 'Left'
-                elif right >= 1.5:
-                    wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
-                    current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
-                    direction = 'Right' 
+
 
             elif self.corrCompass() == 90:
                 if center >= 1.2 and back >= 1.2:
@@ -863,14 +862,6 @@ class MyRob(CRobLinkAngs):
                     current_pose = (last_pose[0], wall[1] - self.distance((center + back)/2) - robot_radius)
                     last_pose = current_pose
                     direction = 'Front'
-                if left >= 1.5:
-                    wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
-                    current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
-                    direction = 'Left' 
-                elif right >= 1.5:
-                    wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
-                    current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
-                    direction = 'Right'
 
             elif self.corrCompass() == 180:
                 if center >= 1.2 and back >= 1.2:
@@ -878,14 +869,6 @@ class MyRob(CRobLinkAngs):
                     current_pose = (wall[0] + self.distance((center + back)/2) + robot_radius, last_pose[1])
                     last_pose = current_pose
                     direction = 'Front'
-                if left >= 1.5:
-                    wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
-                    current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
-                    direction = 'Left'
-                elif right >= 1.5:
-                    wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
-                    current_pose = (last_pose[0], wall[1] - self.distance(right) - robot_radius)
-                    direction = 'Right'
 
             elif self.corrCompass() == -90:
                 if center >= 1.2 and back >= 1.2:
@@ -893,14 +876,7 @@ class MyRob(CRobLinkAngs):
                     current_pose = (last_pose[0], wall[1] + self.distance((center + back)/2) + robot_radius)
                     last_pose = current_pose
                     direction = 'Front'
-                if left >= 1.5:
-                    wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
-                    current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
-                    direction = 'Left'
-                elif right >= 1.5:
-                    wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
-                    current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
-                    direction = 'Right'
+
 
             if current_pose:
                 current_pose = (round(current_pose[0], 3), round(current_pose[1], 3))
@@ -977,13 +953,13 @@ rob_name = "veryimportantrobot"
 host = "localhost"
 pos = 1
 mapc = None
-f = 'pathC3.out'
+f = "default"
 
 for i in range(1, len(sys.argv), 2):
     if (sys.argv[i] == "--host" or sys.argv[i] == "-h") and i != len(sys.argv) - 1:
         host = sys.argv[i + 1]
     elif (sys.argv[i] == "--pos" or sys.argv[i] == "-p") and i != len(sys.argv) - 1:
-        pos = int(sys.argv[i + 1])
+        pos = sys.argv[i + 1] 
     elif (sys.argv[i] == "--robname" or sys.argv[i] == "-r") and i != len(sys.argv) - 1:
         rob_name = sys.argv[i + 1]
     elif (sys.argv[i] == "--map" or sys.argv[i] == "-m") and i != len(sys.argv) - 1:
@@ -998,13 +974,9 @@ if __name__ == '__main__':
     logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s',
                         level=logging.DEBUG)
     # set up logging to console
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
     # set a format which is simpler for console use
     formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
-    console.setFormatter(formatter)
     # add the handler to the root logger
-    logging.getLogger('').addHandler(console)
 
     logger = logging.getLogger(__name__)
     rob = MyRob(rob_name, pos, [0.0, 90.0, -90.0, 0.0], host)
