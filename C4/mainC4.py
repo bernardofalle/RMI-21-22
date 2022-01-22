@@ -47,6 +47,9 @@ class MyRob(CRobLinkAngs):
         self.estimated_velocity = [(0, 0)]
         self.pose = [(0, 0)]
         self.WallClose = False
+        self.side_correction = False
+        self.left_detected = False
+        self.right_detected = False
 
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
@@ -140,12 +143,21 @@ class MyRob(CRobLinkAngs):
         # If it is facing south, offset the compass
         if self.South and self.measures.compass < -90:
             self.measures.compass += 360
-
         # If it has travelled a distance of 2
         if self.endCycle:
-            logging.info(f'Cycle ended on {round(self.measures.x), round(self.measures.y)}')
+            if not self.onRot:
+                self.left_detected = left_sensor >= 1.5
+                self.right_detected = right_sensor >= 1.5
+                # if (self.distance(left_sensor) + self.distance(right_sensor) >= 2) and (left_sensor <= 0.6 or right_sensor <= 0.6):
+                #     self.side_correction = False
+                # else:
+                #     self.side_correction = True
+                logging.info(f'Cycle ended on {round(self.measures.x), round(self.measures.y)}')
+                logging.info(f'Wall on Left:  {self.left_detected}, Wall on Right: {[self.right_detected]}')
             # If you are rotating
             if self.onRot:
+                self.left_detected = False
+                self.right_detected = False
                 logging.debug(f'Rotating to {self.objective}')
                 # Start rotating to the predefined. Once it is done, this function returns false
                 self.onRot = self.rotate(3, 0, 0, self.objective, False)
@@ -203,7 +215,8 @@ class MyRob(CRobLinkAngs):
                 self.onRot = True
 
             else:
-                logging.debug(f'Ended cycle on ({self.measures.x},{self.measures.y})')
+                if not self.onRot:
+                    logging.debug(f'Ended cycle on ({self.measures.x},{self.measures.y})')
                 # If it doesn't have anything in front, nor is in middle of a rotation, nor is it searching for a next
                 # position, add the walked, known and unknown coordinates
                 self.appendWalked()
@@ -456,10 +469,11 @@ class MyRob(CRobLinkAngs):
                     self.beacon_coordinates.append((self.round_even(self.measures.x), self.round_even(self.measures.y)))
 
             # Defines a new objective
-            if self.minus:
-                self.obj -= 2
-            else:
-                self.obj += 2
+            # if self.minus:
+            #     self.obj -= 2
+            # else:
+            #     self.obj += 2
+            self.counter = 0
 
             # Placing the current and previous location on the map matrix. Calls the wall function to map the walls.
             if current == 0:
@@ -486,6 +500,7 @@ class MyRob(CRobLinkAngs):
                 self.maze.matrix[self.last_y + 1][self.last_x] = 'X'
                 self.maze.matrix[self.last_y + 2][self.last_x] = 'X'
                 self.last_y = -y + 13
+
 
             # If the movement is over, return true. If not, return false
             return True
@@ -831,86 +846,105 @@ class MyRob(CRobLinkAngs):
     
     def corrector(self, last_pose):
         current_pose = None
-        direction = None
-        # last_pose = self.pose[-1]
+        wall = None
+        direction = ""
+        old_pose = last_pose
         center = self.measures.irSensor[0]
         left = self.measures.irSensor[1]
         right = self.measures.irSensor[2]
         back = self.measures.irSensor[3]
         robot_radius = 0.5 #0.5 diameter
-        distance_to_wall = 1
+        distance_to_wall = 0.9
         difference_threshold = 2
+        value_to_front = 1.2
+        value_to_min_side = 0.6
+        value_to_max_side = 1.5
+        distance_threshold = 2.0
+        # logging.debug(f'Left: {self.side_correction}')
 
         if self.compare_compass() <= difference_threshold:
             if self.corrCompass() == 0:
-                if center >= 1.2 and back >= 1.2:
+                if center >= value_to_front and back >= value_to_front:
                     wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
                     current_pose = (wall[0] - self.distance((center + back)/2) - robot_radius, last_pose[1])
                     last_pose = current_pose
-                    direction = 'Front'
-                if left >= 1.5:
+                    direction = 'Front '
+
+                # elif (self.left_detected and self.distance(left) <= value_to_min_side) or (self.right_detected and self.distance(right) <= value_to_min_side):
+                # elif self.distance(left) + self.distance(right) >= distance_threshold and self.side_correction and (left <= 0.6 or right <= 0.6):
+                # elif (left <= value_to_min_side or right <= value_to_min_side) and self.side_correction:
+                    # wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
+                    # current_pose = (self.round_odd(last_pose[0]) + 0.35, last_pose[1])
+                    # last_pose = current_pose
+                    # self.side_correction = False
+                    # direction = 'Left '
+                if left >= value_to_max_side:
                     wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
                     current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
-                    direction = 'Left'
-                elif right >= 1.5:
+                    direction = direction + 'Left'
+                elif right >= value_to_max_side:
                     wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
                     current_pose = (last_pose[0], wall[1] + self.distance(right) + robot_radius)
-                    direction = 'Right' 
+                    direction = direction + 'Right'
 
             elif self.corrCompass() == 90:
-                if center >= 1.2 and back >= 1.2:
+                if center >= value_to_front and back >= value_to_front:
                     wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
                     current_pose = (last_pose[0], wall[1] - self.distance((center + back)/2) - robot_radius)
                     last_pose = current_pose
                     direction = 'Front'
-                if left >= 1.5:
+                if left >= value_to_max_side:
                     wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
                     current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
-                    direction = 'Left' 
-                elif right >= 1.5:
+                    direction = direction + 'Left'
+                elif right >= value_to_max_side:
                     wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
                     current_pose = (wall[0] - self.distance(right) - robot_radius, last_pose[1])
-                    direction = 'Right'
+                    direction = direction + 'Right'
 
             elif self.corrCompass() == 180:
-                if center >= 1.2 and back >= 1.2:
+                if center >= value_to_front and back >= value_to_front:
                     wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
                     current_pose = (wall[0] + self.distance((center + back)/2) + robot_radius, last_pose[1])
                     last_pose = current_pose
                     direction = 'Front'
-                if left >= 1.5:
+                if left >= value_to_max_side:
                     wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
                     current_pose = (last_pose[0], wall[1] + self.distance(left) + robot_radius)
-                    direction = 'Left'
-                elif right >= 1.5:
+                    direction = direction + 'Left'
+                elif right >= value_to_max_side:
                     wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
                     current_pose = (last_pose[0], wall[1] - self.distance(right) - robot_radius)
-                    direction = 'Right'
+                    direction = direction + 'Right'
 
             elif self.corrCompass() == -90:
-                if center >= 1.2 and back >= 1.2:
+                if center >= value_to_front and back >= value_to_front:
                     wall = last_pose[0], self.round_even(last_pose[1]) - distance_to_wall
                     current_pose = (last_pose[0], wall[1] + self.distance((center + back)/2) + robot_radius)
                     last_pose = current_pose
                     direction = 'Front'
-                if left >= 1.5:
+                if left >= value_to_max_side:
                     wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
                     current_pose = (wall[0] - self.distance(left) - robot_radius, last_pose[1])
-                    direction = 'Left'
-                elif right >= 1.5:
+                    direction = direction + 'Left'
+                elif right >= value_to_max_side:
                     wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
                     current_pose = (wall[0] + self.distance(right) + robot_radius, last_pose[1])
-                    direction = 'Right'
+                    direction = direction + 'Right'
 
             if current_pose:
                 current_pose = (round(current_pose[0], 3), round(current_pose[1], 3))
-                last_pose = (round(last_pose[0], 3), round(last_pose[1], 3))
-                logging.debug(f'Wall close to the {direction}, I believe I am at {current_pose} and I believed I was at {last_pose}')
-                logging.debug(f'Wall coordinates: {wall}')
+                old_pose = (round(old_pose[0], 3), round(old_pose[1], 3))
+                logging.debug(f'Wall close to the {direction}, I believe I am at {current_pose} and I believed I was at {old_pose}')
+                if wall:
+                    logging.debug(f'Wall coordinates: {wall}')
                 return current_pose
 
     def round_even(self, number):
         return round(number/2)*2
+
+    def round_odd(self, number):
+        return round(number/2)*2-1
 
     def converter(self, lin, rot):
         """
