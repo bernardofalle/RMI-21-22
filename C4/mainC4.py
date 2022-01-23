@@ -869,15 +869,12 @@ class MyRob(CRobLinkAngs):
                     current_pose = (wall[0] - self.distance((center + back)/2) - robot_radius, last_pose[1])
                     last_pose = current_pose
                     direction = 'Front '
-
-                # elif (self.left_detected and self.distance(left) <= value_to_min_side) or (self.right_detected and self.distance(right) <= value_to_min_side):
-                # elif self.distance(left) + self.distance(right) >= distance_threshold and self.side_correction and (left <= 0.6 or right <= 0.6):
-                # elif (left <= value_to_min_side or right <= value_to_min_side) and self.side_correction:
-                    # wall = self.round_even(last_pose[0]) + distance_to_wall, last_pose[1]
-                    # current_pose = (self.round_odd(last_pose[0]) + 0.35, last_pose[1])
-                    # last_pose = current_pose
-                    # self.side_correction = False
-                    # direction = 'Left '
+                elif (self.left_detected and left <= value_to_min_side) or (self.right_detected and right <= value_to_min_side):
+                    current_pose = (self.round_odd(last_pose[0]) + 0.35, last_pose[1])
+                    last_pose = current_pose
+                    self.left_detected = False
+                    self.right_detected = False
+                    direction = 'Sides '
                 if left >= value_to_max_side:
                     wall = last_pose[0], self.round_even(last_pose[1]) + distance_to_wall
                     current_pose = (last_pose[0], wall[1] - self.distance(left) - robot_radius)
@@ -893,6 +890,12 @@ class MyRob(CRobLinkAngs):
                     current_pose = (last_pose[0], wall[1] - self.distance((center + back)/2) - robot_radius)
                     last_pose = current_pose
                     direction = 'Front'
+                elif (self.left_detected and left <= value_to_min_side) or (self.right_detected and right <= value_to_min_side):
+                    current_pose = (last_pose[0], self.round_odd(last_pose[1]) + 0.35)
+                    last_pose = current_pose
+                    self.left_detected = False
+                    self.right_detected = False
+                    direction = 'Sides '
                 if left >= value_to_max_side:
                     wall = self.round_even(last_pose[0]) - distance_to_wall, last_pose[1]
                     current_pose = (wall[0] + self.distance(left) + robot_radius, last_pose[1])
@@ -944,7 +947,12 @@ class MyRob(CRobLinkAngs):
         return round(number/2)*2
 
     def round_odd(self, number):
-        return round(number/2)*2-1
+        difference = number - self.round_even(number)
+        if difference >= 0:
+            return round(number/2)*2 + 1
+        else:
+            return round(number/2)*2 - 1
+
 
     def converter(self, lin, rot):
         """
