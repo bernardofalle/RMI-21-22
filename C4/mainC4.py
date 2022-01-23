@@ -342,6 +342,8 @@ class MyRob(CRobLinkAngs):
                             self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
                         except:
                             self.path, timeout = astar(self.maze.matrix, final_goal, start, time(), 0.5)
+                            if self.path:
+                                self.path.reverse()
                         logging.debug(f'Calculated a path between {start} and {final_goal}, and it was: {self.path}')
 
                     else:
