@@ -35,6 +35,8 @@ shift $(($OPTIND-1))
 case $challenge in
     4)
         # how to call agent for challenge 4
+	source venv/bin/activate
+	pip install -r requirements.txt
         python3 mainC4.py -h "$host" -p "$pos" -r "$robname" -f "$outfile"
         ;;
         # how to call agent for challenge 4
