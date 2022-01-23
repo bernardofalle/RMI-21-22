@@ -369,11 +369,11 @@ class MyRob(CRobLinkAngs):
 
     def writeMap(self):
         """
-        Converts the map matrix to a .out file
+        Converts the map matrix to a .map file
         :return:
         """
         # Opens the file
-        f = open(self.f + '.out', 'w+')
+        f = open(self.f + '.map', 'w+')
 
         # For every element in the matrix, writes it in the file
         for line in self.maze.matrix:
