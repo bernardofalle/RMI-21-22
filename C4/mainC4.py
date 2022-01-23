@@ -113,32 +113,34 @@ class MyRob(CRobLinkAngs):
         """
         # TODO Remove this on delivery
         # Remove absolute gps coordinates
-        self.gpsConverter()
-        self.real_x = self.measures.x
-        self.real_y = self.measures.y
         self.measures.x = self.pose[-1][0]
         self.measures.y = self.pose[-1][1]
-        threshold_warn = 0.5
-        threshold_error = 1
-        threshold_critical = 2
-        difference_x = round(self.measures.x - self.real_x, 3)
-        difference_y = round(self.measures.y - self.real_y, 3)
-        difference_distance = round(math.sqrt(difference_y ** 2 + difference_x ** 2), 3)
+        # self.gpsConverter()
+        # self.real_x = self.measures.x
+        # self.real_y = self.measures.y
+        # self.measures.x = self.pose[-1][0]
+        # self.measures.y = self.pose[-1][1]
+        # threshold_warn = 0.5
+        # threshold_error = 1
+        # threshold_critical = 2
+        # difference_x = round(self.measures.x - self.real_x, 3)
+        # difference_y = round(self.measures.y - self.real_y, 3)
+        # difference_distance = round(math.sqrt(difference_y ** 2 + difference_x ** 2), 3)
         center_sensor = self.measures.irSensor[0]
         left_sensor = self.measures.irSensor[1]
         right_sensor = self.measures.irSensor[2]
         back_sensor = self.measures.irSensor[3]
-        if not self.onRot:
-            logging.debug(f'The real GPS values are (X,Y): ({round(self.real_x, 3)},{round(self.real_y, 3)})')
-            logging.debug(f'The calculates GPS values are: ({round(self.measures.x, 3)},{round(self.measures.y, 3)})')
-            logging.debug(f'The difference between values is ({difference_x},{difference_y})')
-            logging.debug(f'The values of the sensors are (f, l, r, b): {center_sensor, left_sensor, right_sensor, back_sensor}')
-            if difference_distance >= threshold_critical:
-                logging.critical(f'Gigantic error experienced, larger than {threshold_critical}')
-            elif difference_distance >= threshold_error:
-                logging.error(f'Enormous error experienced, larger than {threshold_error}')
-            elif difference_distance >= threshold_warn:
-                logging.warning(f'A lot of error experienced, larger than {threshold_warn}')
+        # if not self.onRot:
+        #     logging.debug(f'The real GPS values are (X,Y): ({round(self.real_x, 3)},{round(self.real_y, 3)})')
+        #     logging.debug(f'The calculates GPS values are: ({round(self.measures.x, 3)},{round(self.measures.y, 3)})')
+        #     logging.debug(f'The difference between values is ({difference_x},{difference_y})')
+        #     logging.debug(f'The values of the sensors are (f, l, r, b): {center_sensor, left_sensor, right_sensor, back_sensor}')
+        #     if difference_distance >= threshold_critical:
+        #         logging.critical(f'Gigantic error experienced, larger than {threshold_critical}')
+        #     elif difference_distance >= threshold_error:
+        #         logging.error(f'Enormous error experienced, larger than {threshold_error}')
+        #     elif difference_distance >= threshold_warn:
+        #         logging.warning(f'A lot of error experienced, larger than {threshold_warn}')
 
         # Check if the compass is facing south
         self.checkChangeCompass()
