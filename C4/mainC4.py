@@ -309,7 +309,7 @@ class MyRob(CRobLinkAngs):
             self.endCycle = self.moveFront(0.1, 0.01, 0.00005)
             logging.debug(f'I am moving in front and facing {self.measures.compass} ({self.corrCompass()}, with the '
                           f'objective {self.obj})')
-        
+
     def a(self, start, goal_list):
         """
                 The start of an a start algorithm, performing the needed operations before the algorithm is started
@@ -341,9 +341,12 @@ class MyRob(CRobLinkAngs):
                         try:
                             self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
                         except:
-                            self.path, timeout = astar(self.maze.matrix, final_goal, start, time(), 0.5)
-                            if self.path:
-                                self.path.reverse()
+                            try:
+                                self.path, timeout = astar(self.maze.matrix, final_goal, start, time(), 0.5)
+                                if self.path:
+                                    self.path.reverse()
+                            except:
+                                continue
                         logging.debug(f'Calculated a path between {start} and {final_goal}, and it was: {self.path}')
 
                     else:
@@ -381,7 +384,7 @@ class MyRob(CRobLinkAngs):
             for e in k:
                 e.insert(0, I)
                 e.append(I)
-            
+
             perms = k
 
             for perm in perms:
@@ -426,7 +429,7 @@ class MyRob(CRobLinkAngs):
                 f.write(element)
             f.write('\n')
         f.close()
-    
+
     def writePath(self):
         """
         Writes the path from a list to a .out file
@@ -911,7 +914,7 @@ class MyRob(CRobLinkAngs):
 
     def distance(self, x):
         return 1 / x
-    
+
     def corrector(self, last_pose):
         current_pose = None
         wall = None
