@@ -6,20 +6,20 @@ robname="theAgent"
 pos="0"
 outfile="solution"
 
-while getopts "c:h:r:p:f:" op
+while getopts "c:p:r:h:f:" op
 do
     case $op in
         "c")
             challenge=$OPTARG
             ;;
-        "h")
-            host=$OPTARG
+        "p")
+            pos=$OPTARG
             ;;
         "r")
             robname=$OPTARG
             ;;
-        "p")
-            pos=$OPTARG
+        "h")
+            host=$OPTARG
             ;;
         "f")
             outfile=$OPTARG
