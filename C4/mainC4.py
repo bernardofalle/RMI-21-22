@@ -260,10 +260,31 @@ class MyRob(CRobLinkAngs):
                         end_list = self.unknown
 
                         # From the list of possible ends and the current coordinates, search the smallest path
+                        logging.debug(f'Caculating paths from {start} to the list {end_list}')
                         end = self.a(start, end_list)
                         if not end and self.go0:
-                            end = self.a(start, [(-1,0)])
+                            logging.info('Going to zero to end the challenge')
+                            neighbours = [(-1, 0), (0, -1), (1, 0), (0, 1)]
+                            min_end = None
+                            min_path = None
+                            for neighbour in neighbours:
+                                if neighbour in self.known:
+                                    end = self.a(start, [neighbour])
+                                    path = self.path
+                                    if min_path:
+                                        if len(path) < len(min_path):
+                                            min_end = end
+                                            min_path = path
+                                    else:
+                                        min_end = end
+                                        min_path = path
+                            end = min_end
+                            self.path = min_path
+                            logging.debug(f'This is the end and path: {end, self.path}')
+
                         # Remove the odd cells from the path, add the end and removing the start
+                        logging.info(f'I calculated a path which is: {self.path}')
+                        logging.debug(f'The end is {end}')
                         self.path = [items for items in self.path if items[0] % 2 == 0 and items[1] % 2 == 0]
                         self.path.append((2 * end[0] - self.path[-1][0], 2 * end[1] - self.path[-1][1]))
                         self.path.remove(start)
@@ -271,7 +292,6 @@ class MyRob(CRobLinkAngs):
                         # Start the variables
                         self.pathfollowing = True
                         self.haspath = True
-                        logging.info(f'I calculated a path which is: {self.path}')
                     else:
                         # If it has a path already, walk in front
                         self.endCycle = False
@@ -310,13 +330,18 @@ class MyRob(CRobLinkAngs):
             for i, j in neighbours:
                 # Calculating the neighbour coordinates
                 neigh = goal[0] + i, goal[1] + j
-
+                logging.debug(f'A* Checking connection between {goal} and {neigh}')
                 # If the neighbour is free and even
-                if self.maze.matrix[13 - neigh[1]][neigh[0] + 27] == 'X' and neigh[0] % 2 == 0 and neigh[1] % 2 == 0:
+                if (self.maze.matrix[13 - neigh[1]][neigh[0] + 27] == 'X' or self.maze.matrix[13 - neigh[1]][neigh[0] + 27] == 'I') and neigh[0] % 2 == 0 and neigh[1] % 2 == 0:
                     # Calculate the path
                     final_goal = neigh
                     if start and final_goal:
-                        self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
+                        try:
+                            self.path, timeout = astar(self.maze.matrix, start, final_goal, time(), 0.5)
+                        except:
+                            self.path, timeout = astar(self.maze.matrix, final_goal, start, time(), 0.5)
+                        logging.debug(f'Calculated a path between {start} and {final_goal}, and it was: {self.path}')
+
                     else:
                         continue
 
@@ -326,6 +351,8 @@ class MyRob(CRobLinkAngs):
                         min_idx = idx
                         min_len = length
                         min_path = self.path
+                else:
+                    logging.debug('Connection is impossible')
         # The path is equal to the minimum path
         self.path = min_path
 
@@ -355,27 +382,22 @@ class MyRob(CRobLinkAngs):
 
             for perm in perms:
                 for i in range(0, len(perm) - 1):
-                    print(perm, i)
                     try:
                         p, timeout = astar(self.maze.matrix, perm[i], perm[i + 1], time(), 2)
                     except:
-                        p = [0 for number in range(50)]
-                    print(p)
+                        p, timeout = astar(self.maze.matrix, perm[i + 1], perm[i], time(), 2)
+                        p.reverse()
                     path.extend(p)
                     path.pop()
                 if len(self.final_path) == 0:
-                    print(0)
                     self.final_path = path
                 elif len(path) <= len(self.final_path):
-                    print(1)
                     self.final_path = path
                 path = []
             self.final_path.append((0,0))
-            print(self.path)
             self.final_path = [i for i in self.final_path if i[0] % 2 == 0 and i[1] % 2 == 0]
-
+            logging.info(f'The final path is: {self.final_path}')
             self.writePath()
-            
             self.maze.matrix[13][27] = '0'
             if self.beacon_coordinates :
                 for e in self.beacon_coordinates:
