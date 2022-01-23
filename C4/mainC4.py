@@ -26,7 +26,7 @@ class MyRob(CRobLinkAngs):
         self.length = 2
         self.lengthrot = 2
         self.objective = 0
-        self.endCycle = False
+        self.endCycle = True
         self.onRot = False
         self.minus = False
         self.South = False
@@ -34,7 +34,7 @@ class MyRob(CRobLinkAngs):
         self.last_x = 27
         self.last_y = 13
         self.unknown = []
-        self.known = [(0, 0)]
+        self.known = []
         self.path = []
         self.searching = False
         self.walked = [(0, 0)]
@@ -52,6 +52,7 @@ class MyRob(CRobLinkAngs):
         self.left_detected = False
         self.right_detected = False
         self.go0 = False
+        self.first = True
 
 
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
@@ -216,7 +217,17 @@ class MyRob(CRobLinkAngs):
                 self.searchUnknown()
                 self.whosFree()
                 self.onRot = True
-
+                self.first = False
+            elif self.first:
+                if self.corrCompass() == 0:
+                    self.onRot = True
+                    self.objective = 180
+                    self.searchUnknown()
+                elif self.corrCompass() == 180:
+                    self.onRot = True
+                    self.objective = 0
+                    self.searchUnknown()
+                    self.first = 0
             else:
                 if not self.onRot:
                     logging.debug(f'Ended cycle on ({self.measures.x},{self.measures.y})')
@@ -344,15 +355,23 @@ class MyRob(CRobLinkAngs):
 
             for perm in perms:
                 for i in range(0, len(perm) - 1):
-                    p, timeout = astar(self.maze.matrix, perm[i], perm[i + 1], time(), 0.5)
+                    print(perm, i)
+                    try:
+                        p, timeout = astar(self.maze.matrix, perm[i], perm[i + 1], time(), 2)
+                    except:
+                        p = [0 for number in range(50)]
+                    print(p)
                     path.extend(p)
                     path.pop()
                 if len(self.final_path) == 0:
+                    print(0)
                     self.final_path = path
-                elif len(path) <= len(self.final_path) :
+                elif len(path) <= len(self.final_path):
+                    print(1)
                     self.final_path = path
                 path = []
             self.final_path.append((0,0))
+            print(self.path)
             self.final_path = [i for i in self.final_path if i[0] % 2 == 0 and i[1] % 2 == 0]
 
             self.writePath()
@@ -807,16 +826,28 @@ class MyRob(CRobLinkAngs):
         entry = (x, y)
         last_entry = self.walked[-2]
         mid_entry = (int((last_entry[0] + entry[0]) / 2), (int((last_entry[1] + entry[1]) / 2)))
+        # If the first wall is covered
+        equal = last_entry == mid_entry
+        if equal:
+            # self.first = False
+            logging.debug('My last coord is the same as the current one.')
+
         # Append the coordinates if they are not there already, and remove if on unknown
         if entry in self.unknown:
             self.unknown.remove(entry)
             logging.info(f'Removed {entry} of unknown list')
-        if mid_entry in self.unknown:
+        # if mid_entry in self.unknown and not self.first and not equal:
+        if mid_entry in self.unknown and not self.first and not equal:
             self.unknown.remove(mid_entry)
             logging.info(f'Removed {mid_entry} of unknown list')
-        if mid_entry not in self.known:
+        # if mid_entry not in self.known and not self.first and not equal:
+        if mid_entry not in self.known and not equal:
             self.known.append(mid_entry)
             logging.info(f'Added {mid_entry} to known list')
+        # elif mid_entry not in self.known and self.first and not equal:
+        #     self.unknown.append(mid_entry)
+        #     self.first = False
+        #     logging.info(f'Added {mid_entry} to unknown list')
         if entry not in self.known:
             self.known.append(entry)
             logging.info(f'Added {entry} to known list')
